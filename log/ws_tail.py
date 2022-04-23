@@ -16,6 +16,8 @@ import urllib.request
 import json
 import argparse
 
+__VERSION__ = '2022.04.23'
+
 # miner config
 #
 MINER = {
@@ -44,56 +46,71 @@ def dbg(component, msg):
     if component not in DBGMODE: return
     print('= DBG =', component, '=', msg)
 
-def ws_host(host, proto='ws'):
-    """ add protocol/scheme to the host if not already there """
-    return host if host.startswith(proto) else 'ws://%s' % host
 
-def log_init(wshost, logname):
-    """ initialize websocket via http - controllino specific """
-    url = ''.join([wshost.replace('ws','http'), '/', MINER['controllino'].get(logname).get('open')])
-    with urllib.request.urlopen(url) as u:
-        rs = u.read()
-    dbg('ws', 'log_open %s -> %s' % (url, rs))
-    # {"status":200}
-    code = json.loads(rs).get('status')
-    dbg('ws', 'log_open status code: %s' % code)
-    return code == 200
+class WSClient:
 
-def on_message(ws, message):
-    print(message)
+    def __init__(self, host, logname, minercfg):
+        self.miner_cfg = minercfg
+        self.ws_server = self.ws_host(host)
+        self.follow    = self.follow_log(logname)
 
-def on_error(ws, error):
-    print('= ERR =',error,'=')
+    def ws_host(self, host, proto='ws'):
+        """ add protocol/scheme to the host if not already there """
+        return host if host.startswith(proto) else '%s://%s' % (proto, host)
 
-def on_close(ws, close_status_code, close_msg):
-    print("= websocket connection closed = code:",close_status_code,'=',close_msg)
+    def follow_log(self, logname):
+        """ set full logname from shorted version: err -> error.log """
+        if logname.startswith('con'): return 'console.log'
+        if logname.startswith('err'): return 'error.log'
+        return logname
 
-def on_open(ws):
-    print("= websocket connection opened =", ws.url)
+    def log_init(self):
+        """ initialize websocket via http - controllino specific """
+        url = ''.join([ self.ws_server.replace('ws','http'), '/', self.miner_cfg[self.follow]['open'] ])
+        with urllib.request.urlopen(url) as u:
+            rs = u.read()
+        dbg('ws', 'load_init() %s -> %s' % (url, rs))
+        # {"status":200}
+        code = json.loads(rs).get('status')
+        return code == 200
 
+    def on_message(self, ws, message):
+        print(message)
+
+    def on_error(self, ws, error):
+        """ = ERR = Connection to remote host was lost. = """
+        print('= ERR =',error,'=',ws.url)
+
+    def on_close(self, ws, close_status_code, close_msg):
+        if close_status_code and close_msg:
+            print("= websocket connection closed = [ %d ] %s" % (close_status_code, close_msg))
+
+    def on_open(self, ws):
+        print("= websocket connection opened =", ws.url)
+
+    def run(self):
+        """ open logfile and loop forever """
+        if not self.log_init(): return
+        wsurl = '%s:%d' % (self.ws_server, self.miner_cfg.get(self.follow).get('port'))
+        ws = websocket.WebSocketApp(wsurl,
+                                    on_open=self.on_open,
+                                    on_message=self.on_message,
+                                    on_error=self.on_error,
+                                    on_close=self.on_close)
+        ws.run_forever()
 
 if __name__ == "__main__":
-
+    # cli pars
     parser = argparse.ArgumentParser(description='tail remote log from host via websocket connection',
                                      epilog='example: ws_tail.py -f console.log controllinohotspot')
     parser.add_argument('wserver',  metavar='[ws[s]://]host', help='websocket server to connect to')
     parser.add_argument('-f', '--follow',   metavar='name', default='', required=False, help='follow log name (con[sole[.log]] or err[or[.log]])')
     parser.add_argument('-d', '--debug', metavar='c1[,c2]', default='', required=False, help='enable debug for component (par for pars, ws for websocket, ql for qualifier)')
     args = parser.parse_args()
-    wserver = ws_host(args.wserver)
     DBGMODE = args.debug
-    follow   = args.follow
-    if follow.startswith('con'): follow = 'console.log'
-    if follow.startswith('err'): follow = 'error.log'
-    dbg('par', 'follow=%s, debug=%s, wserver=%s' % (follow, DBGMODE, wserver))
-
     if 'ws' in DBGMODE: websocket.enableTrace(True)
+
+    # websocket client
+    wsc = WSClient(host=args.wserver, logname=args.follow, minercfg=MINER['controllino'])
     # open log and run websocket forever
-    if log_init(wserver, follow):
-        wsurl = '%s:%d' % (wserver, MINER['controllino'].get(follow).get('port'))
-        ws = websocket.WebSocketApp(wsurl,
-                              on_open=on_open,
-                              on_message=on_message,
-                              on_error=on_error,
-                              on_close=on_close)
-        ws.run_forever()
+    wsc.run()
