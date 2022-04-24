@@ -2,7 +2,7 @@
 #
 # utility to tail remote log files via websocket ws:// connection
 #
-# requires: sudo pip3 install websocket-client
+# requires: sudo pip3 install websocket-client # https://github.com/websocket-client/websocket-client
 #
 
 # tail --follow console.log (long par version):
@@ -15,6 +15,9 @@ import websocket
 import urllib.request
 import json
 import argparse
+import re
+import signal
+import time
 
 __VERSION__ = '2022.04.23'
 
@@ -33,9 +36,16 @@ MINER = {
         },
         'process.log': {
             'open': 'processlog'
+        },
+        'classify': {
+            'line': re.compile(r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \d \[(?P<level>\w+)\] <[\d.]+>@(?P<proc>\w+:\w+):\{\d+,\d+\} (?P<msg>.+)$')
         }
     }
 }
+
+# 'line': re.compile(
+#    r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \d \[(?P<level>\w+)\] <[\d.]+>@(?P<proc>\w+:\w+):\{\d+,\d+\} (?P<msg>.+)$'),
+# 'error': 'failed to '
 
 # debog cmponents (csv)
 #
@@ -47,12 +57,40 @@ def dbg(component, msg):
     print('= DBG =', component, '=', msg)
 
 
+class Classifier:
+
+    def __init__(self, cfg):
+        """ """
+        self.cfg = cfg
+        self.stat = {}
+
+    def stat_count(self, level, proc):
+        """ [level][proc] """
+        self.stat[level] = 1 + self.stat.get(level, 0)
+
+    def stat_error(self, msg):
+        """ """
+        regex = self.cfg['console.log']['split']
+        m = regex.split(msg)
+
+    def classify(self, msg):
+        """ classify the msg """
+        regex = self.cfg.get('line')
+        if regex is None: return
+        m = regex.match(msg)
+        #if m is None: return
+        self.stat_count(m['level'], m['proc'])
+        #if m['level'] == 'error':
+        #    self.stat_error(m['msg'])
+
+
 class WSClient:
 
     def __init__(self, host, logname, minercfg):
         self.miner_cfg = minercfg
         self.ws_server = self.ws_host(host)
         self.follow    = self.follow_log(logname)
+        self.classifier =  Classifier(minercfg.get('classify'))
 
     def ws_host(self, host, proto='ws'):
         """ add protocol/scheme to the host if not already there """
@@ -64,22 +102,30 @@ class WSClient:
         if logname.startswith('err'): return 'error.log'
         return logname
 
-    def log_init(self):
+    def log_init(self, tries=10, sleep=5):
         """ initialize websocket via http - controllino specific """
         url = ''.join([ self.ws_server.replace('ws','http'), '/', self.miner_cfg[self.follow]['open'] ])
-        with urllib.request.urlopen(url) as u:
-            rs = u.read()
-        dbg('ws', 'load_init() %s -> %s' % (url, rs))
-        # {"status":200}
-        code = json.loads(rs).get('status')
-        return code == 200
+        for attempt in range(1, tries+1):
+            try:
+                with urllib.request.urlopen(url) as u:
+                    rs = u.read()
+                dbg('ws', 'load_init() attempt %d: %s -> %s' % (attempt, url, rs))
+                # {"status":200}
+                code = json.loads(rs).get('status')
+                return code == 200
+            except urllib.error.URLError as e:
+                # urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+                print('= ERR = log_init() attempt %d = [code: %s] %s' % (attempt, e.code, e.reason))
+                time.sleep(sleep)
 
     def on_message(self, ws, message):
-        print(message)
+        print(self.loop, message)
+        self.classifier.classify(message)
+        #print(self.classifier.stat)
 
-    def on_error(self, ws, error):
+    def on_error(self, ws, exc):
         """ = ERR = Connection to remote host was lost. = """
-        print('= ERR =',error,'=',ws.url)
+        print('= ERR =',exc,'=',ws.url)
 
     def on_close(self, ws, close_status_code, close_msg):
         if close_status_code and close_msg:
@@ -88,16 +134,30 @@ class WSClient:
     def on_open(self, ws):
         print("= websocket connection opened =", ws.url)
 
+    def on_usr1(self, signum, frame):
+        """ kill -USR1 pid """
+        print("=== statistics === signum:",signum,' frame:',frame)
+        print('f_globals:',frame.f_globals)
+        print('f_locals:',frame.f_locals)
+        print(self.classifier.stat)
+
     def run(self):
         """ open logfile and loop forever """
-        if not self.log_init(): return
         wsurl = '%s:%d' % (self.ws_server, self.miner_cfg.get(self.follow).get('port'))
-        ws = websocket.WebSocketApp(wsurl,
+        for self.loop in range(1,3):
+            print('=== loop:',self.loop)
+            if not self.log_init(): break
+            ws = websocket.WebSocketApp(wsurl,
                                     on_open=self.on_open,
                                     on_message=self.on_message,
                                     on_error=self.on_error,
                                     on_close=self.on_close)
-        ws.run_forever()
+            if not ws.run_forever(): break
+            # ^C= ERR =  = ws://controllinohotspot:7878, teardown= False
+            # = ERR = Connection to remote host was lost. = ws://controllinohotspot:7878, teardown= True
+        print('=== loop end ===')
+        # === loop: 2 = ERR = [Errno 111] Connection refused = ws://controllinohotspot:7878
+        # === loop: 9 = ERR = [Errno 111] Connection refused = ws://controllinohotspot:7878
 
 if __name__ == "__main__":
     # cli pars
@@ -112,5 +172,7 @@ if __name__ == "__main__":
 
     # websocket client
     wsc = WSClient(host=args.wserver, logname=args.follow, minercfg=MINER['controllino'])
+    # signals
+    signal.signal(signal.SIGUSR1, wsc.on_usr1)
     # open log and run websocket forever
     wsc.run()
