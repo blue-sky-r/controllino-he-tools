@@ -19,7 +19,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.04.23'
+__VERSION__ = '2022.04.25'
 
 # miner config
 #
@@ -115,7 +115,7 @@ class WSClient:
                 return code == 200
             except urllib.error.URLError as e:
                 # urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
-                print('= ERR = log_init() attempt %d = [code: %s] %s' % (attempt, e.code, e.reason))
+                print('= ERR = log_init() attempt %d = %s' % (attempt, e.reason))
                 time.sleep(sleep)
 
     def on_message(self, ws, message):
@@ -144,7 +144,7 @@ class WSClient:
     def run(self):
         """ open logfile and loop forever """
         wsurl = '%s:%d' % (self.ws_server, self.miner_cfg.get(self.follow).get('port'))
-        for self.loop in range(1,3):
+        for self.loop in range(1, 10):
             print('=== loop:',self.loop)
             if not self.log_init(): break
             ws = websocket.WebSocketApp(wsurl,
