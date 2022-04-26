@@ -19,7 +19,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.04.25'
+__VERSION__ = '2022.04.26'
 
 # miner config
 #
@@ -137,11 +137,15 @@ class WSClient:
     def on_usr1(self, signum, frame):
         """ kill -USR1 pid """
         print("=== statistics === signum:",signum,' frame:',frame)
-        print('f_globals:',frame.f_globals)
-        print('f_locals:',frame.f_locals)
         print(self.classifier.stat)
+        self.stat_file('/tmp/usr1')
 
-    def run(self):
+    def stat_file(self, fname='/tmp/file'):
+        """ create stat file """
+        with open(fname, 'w') as f:
+            f.write(json.dumps(self.classifier.stat))
+
+    def run(self, ):
         """ open logfile and loop forever """
         wsurl = '%s:%d' % (self.ws_server, self.miner_cfg.get(self.follow).get('port'))
         for self.loop in range(1, 10):
