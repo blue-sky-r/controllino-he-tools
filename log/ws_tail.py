@@ -19,7 +19,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.04.26'
+__VERSION__ = '2022.04.28'
 
 # miner config
 #
@@ -38,7 +38,14 @@ MINER = {
             'open': 'processlog'
         },
         'classify': {
-            'line': re.compile(r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \d \[(?P<level>\w+)\] <[\d.]+>@(?P<proc>\w+:\w+):\{\d+,\d+\} (?P<msg>.+)$')
+            # 2022-04-28 20:24:07.116 7 [notice] <0.12157.58>@libp2p_yamux_session:handle_info:{189,5} Session liveness failure
+            'line': re.compile(r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \d '
+                                '\[(?P<level>\w+)\] '
+                                '<[\d.]+>@(?P<call>\w+:\w+):\{(?P<loc>\d+,\d+)\} '
+                                '(?P<msg>.+)$'),
+            # @miner_lora:handle_json_data:{564,5} got status #{<<"ackr">> => 100.0,<<"dwnb">> => 0,<<"rxfw">> => 0,<<"rxnb">> => 0,<<"rxok">> => 0,<<"temp">> => 30.0,<<"time">> => <<"2022-04-28 21:32:19 GMT">>,<<"txnb">> => 0}
+            # @miner_lora:handle_json_data:{565,5} Gateway #gateway{mac=12273815315514654720,ip={127,0,0,1},port=55215,sent=0,received=175512,dropped=0,status=#{<<"ackr">> => 100.0,<<"dwnb">> => 0,<<"rxfw">> => 0,<<"rxnb">> => 0,<<"rxok">> => 0,<<"temp">> => 30.0,<<"time">> => <<"2022-04-28 21:32:19 GMT">>,<<"txnb">> => 0},rtt_samples=[],rtt=5000000}
+            'miner_lora:handle_json_data:': ''
         }
     }
 }
@@ -62,16 +69,12 @@ class Classifier:
     def __init__(self, cfg):
         """ """
         self.cfg = cfg
-        self.stat = {}
+        self.cnt = {}
+        self.call = {}
 
-    def stat_count(self, level, proc):
-        """ [level][proc] """
-        self.stat[level] = 1 + self.stat.get(level, 0)
-
-    def stat_error(self, msg):
-        """ """
-        regex = self.cfg['console.log']['split']
-        m = regex.split(msg)
+    def stat_count(self, key, counter):
+        """ cnt[key]++ """
+        counter[key] = 1 + counter.get(key, 0)
 
     def classify(self, msg):
         """ classify the msg """
@@ -79,9 +82,10 @@ class Classifier:
         if regex is None: return
         m = regex.match(msg)
         #if m is None: return
-        self.stat_count(m['level'], m['proc'])
-        #if m['level'] == 'error':
-        #    self.stat_error(m['msg'])
+        # stat msg level
+        self.stat_count(m['level'], self.cnt)
+        # stat calls
+        self.stat_count(m['call'],  self.call)
 
 
 class WSClient:
@@ -135,15 +139,19 @@ class WSClient:
         print("= websocket connection opened =", ws.url)
 
     def on_usr1(self, signum, frame):
-        """ kill -USR1 pid """
-        print("=== statistics === signum:",signum,' frame:',frame)
-        print(self.classifier.stat)
-        self.stat_file('/tmp/usr1')
+        """ kill -USR1 $pid """
+        print("=== statistics === signum:", signum, "=", self.classifier.cnt, "=")
+        self.stat_file('/tmp/usr1', self.classifier.cnt)
 
-    def stat_file(self, fname='/tmp/file'):
+    def on_usr2(self, signum, frame):
+        """ kill -USR2 $pid """
+        print("=== statistics === signum:", signum, "=", self.classifier.call, "=")
+        self.stat_file('/tmp/usr2', self.classifier.call)
+
+    def stat_file(self, fname='/tmp/file', data={}):
         """ create stat file """
         with open(fname, 'w') as f:
-            f.write(json.dumps(self.classifier.stat))
+            f.write(json.dumps(data))
 
     def run(self, ):
         """ open logfile and loop forever """
@@ -178,5 +186,6 @@ if __name__ == "__main__":
     wsc = WSClient(host=args.wserver, logname=args.follow, minercfg=MINER['controllino'])
     # signals
     signal.signal(signal.SIGUSR1, wsc.on_usr1)
+    signal.signal(signal.SIGUSR2, wsc.on_usr2)
     # open log and run websocket forever
     wsc.run()
