@@ -18,8 +18,10 @@ based LoRaWAN gateway compatible with [Helium network](https://www.helium.com/) 
 Controllino provides only graphical web interface, but no remote access like ssh or snmp for monitoring the running Raspbian OS.
 To get the full access to Raspbian the physical access to controllino HW is required and SD card with Raspbian
 has to be modified. Such jailbreak will unfortunately void the warranty and will probably be lost
-on the next sw remote upgrade. Therefore all published scripts do not require remote ssh or snmp access
-and work on unmodified / untouched original controllino hardware and software.
+on the next sw remote upgrade. 
+
+    All published scripts do not require remote ssh / snmp access and work 
+    with unmodified / untouched original controllino hardware and software
 
 ### Utilities  
 
@@ -27,9 +29,24 @@ Here are some additional utilities I have implemented and been happily using:
 
 * [log viewers](log/) - to retrieve live log entries (console.log, error.log) remotely:
 
+  * [ws_read.py](log/ws_read.py) - read via websocket ws:// (just proof-of-concept, use ws_tail)
+  
+  * [ws_tail.py](log/ws_tail.py) - websocket tail 
+
 * [mrtg probes](mrtg/) - to visualize various metrics in famous snmp based [mrtg](https://oss.oetiker.ch/mrtg/) grapher:
 
+  * [mrtg-he-reward.sh](mrtg/mrtg-he-rewards.sh) - mrtg probe to retrieve rewards for time period
+  
 
+### Troubleshooting
+
+What to do if something goes wrong or does not work:
+
+* try debug / verbose mode - check usage help how to
+
+* try using explicit parameters (not default ones)
+
+* check the script source and try to increase timeouts, retries etc ...
 
 ##### keywords
 
