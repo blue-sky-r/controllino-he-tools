@@ -29,14 +29,17 @@ Here are some additional utilities I have implemented and been happily using:
 
 * [log viewers](log/) - to retrieve live log entries (console.log, error.log) remotely:
 
-  * [ws_read.py](log/ws_read.py) - read via websocket ws:// (just proof-of-concept, use ws_tail)
+  * [ws_read](log/ws_read.py) - read via websocket ws:// (just proof-of-concept, use ws_tail)
   
-  * [ws_tail.py](log/ws_tail.py) - websocket tail 
+  * [ws_tail](log/ws_tail.py) - websocket tail 
 
 * [mrtg probes](mrtg/) - to visualize various metrics in famous snmp based [mrtg](https://oss.oetiker.ch/mrtg/) grapher:
 
-  * [mrtg-he-reward.sh](mrtg/mrtg-he-rewards.sh) - mrtg probe to retrieve rewards for time period
+  * [HNT rewards](mrtg/mrtg-he-rewards.sh) - mrtg probe to retrieve HNT rewards for time period
   
+  * [RAM usage / CPU temperature](mrtg/mrtg-he-ram-temp.sh) - mrtg probe to retrieve RAM utilization and CPU temperature
+
+  * [blockchain height](mrtg/mrtg-he-height.sh) - mrtg probe to retrieve blockchain height
 
 ### Troubleshooting
 
