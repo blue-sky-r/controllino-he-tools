@@ -10,23 +10,23 @@ _about_="mrtg probe to graph He miner disk/cpu usage/load"
 
 # version
 #
-_version_="2022.05.08"
+_version_="2022.05.09"
 
 # github
 #
-_github_="https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-load.sh"
+_github_="https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-ram-temp.sh"
 
 # DEFAULT He miner hostname
 #
 host="controllinohotspot"
 
-# json message keys to display in this order
+# RAM available to He miner container 4GB ?
 #
-keys="ramusage RAM%, cputemp"
+HeRAM=4096
 
-# controllino RAM in MB
+# json message keys and expressions to eveluate to display in this order
 #
-RAM=2048
+keys="ramusage / $HeRAM * 100, cputemp"
 
 # wget options
 #
@@ -73,16 +73,16 @@ json=$( wget $opts $url )
 #
 pycode=$( cat <<___
 import sys,json
-try:
-    j = json.loads(r'$json')
-except json.decoder.JSONDecodeError:
-    sys.exit()
-RAM = $RAM
+
+def str2float(s, j='unit'):
+    try: return float(s.replace(' ','').replace(j,''))
+    except ValueError: return s
+
+try: j = json.loads(r'$json')
+except json.decoder.JSONDecodeError: sys.exit(-1)
 for key in '$keys'.split(', '):
-    if ' RAM%' in key:
-        v = int(j.get(key.replace(' RAM%',''))) / RAM * 100
-    else:
-        v = float(j.get(key))
+    vars = dict([ (k, str2float(v, '%')) for k,v in j.items() ])
+    v = eval(key, vars)
     print(round(v))
 print('?')
 print('$host')
