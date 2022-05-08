@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# For CONTROLLINO miner only - https://hotspot.controllino.com/
+#  firmware_version: raspbian bionic 2022.03.23.1 + dashboard 1.2.1 - 1.3.4
+#  firmware_version: raspbian bionic 2022.04.27.0 + dashboard 1.3.5
+
+# about
+#
+_about_="mrtg probe to graph He miner disk/cpu usage/load"
+
+# version
+#
+_version_="2022.05.08"
+
+# github
+#
+_github_="https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-load.sh"
+
+# DEFAULT He miner hostname
+#
+host="controllinohotspot"
+
+# json message keys to display in this order
+#
+keys="ramusage RAM%, cputemp"
+
+# controllino RAM in MB
+#
+RAM=2048
+
+# wget options
+#
+opts="--retry-on-host-error --retry-connrefused --retry-on-http-error=503 --timeout=7 --tries=3 -q -O -"
+
+# python interpreter
+#
+python="python3"
+
+# usage help
+#
+[ "$1" == "-h" ] && cat <<< """
+= $_about_ = ver $_version_ = $_github_ =
+
+usage: $0 [-h] [-d] [host]
+
+-h   ... show this usage help
+-d   ... additional debug info
+host ... host/miner to connect to (default $host)
+""" && exit 1
+
+# optional debug
+#
+[ "$1" == "-d" ] && DBG=1 && shift
+
+# optional He miner hostname
+#
+[ $1 ] && host=$1
+
+# url to connect to
+#
+url=http://$host/hotspotstats
+
+[ $DBG ] && echo "DBG.URL: $url"
+
+# json response
+#
+json=$( wget $opts $url )
+
+# {"diskusage":"58%","ramusage":"606","cpuload":"2%","cputemp":"54.53"}
+[ $DBG ] && echo "DBG.JSON: $json" && echo "DBG.KEYS: $keys" && echo
+
+# python code to process json
+#
+pycode=$( cat <<___
+import sys,json
+try:
+    j = json.loads(r'$json')
+except json.decoder.JSONDecodeError:
+    sys.exit()
+RAM = $RAM
+for key in '$keys'.split(', '):
+    if ' RAM%' in key:
+        v = int(j.get(key.replace(' RAM%',''))) / RAM * 100
+    else:
+        v = float(j.get(key))
+    print(round(v))
+print('?')
+print('$host')
+___
+)
+
+# execute
+#
+$python -c "$pycode"
