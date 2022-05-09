@@ -10,7 +10,7 @@ _about_="mrtg probe to graph He miner disk/cpu usage/load"
 
 # version
 #
-_version_="2022.05.09"
+_version_="2022.05.10"
 
 # github
 #
@@ -39,13 +39,15 @@ python="python3"
 # usage help
 #
 [ "$1" == "-h" ] && cat <<< """
-= $_about_ = ver $_version_ = $_github_ =
+= $_about_ = ver $_version_ =
 
 usage: $0 [-h] [-d] [host]
 
 -h   ... show this usage help
 -d   ... additional debug info
 host ... host/miner to connect to (default $host)
+
+$_github_
 """ && exit 1
 
 # optional debug
@@ -64,10 +66,10 @@ url=http://$host/hotspotstats
 
 # json response
 #
-json=$( wget $opts $url )
+json=$( wget $opts $url ); excode=$?
 
 # {"diskusage":"58%","ramusage":"606","cpuload":"2%","cputemp":"54.53"}
-[ $DBG ] && echo "DBG.JSON: $json" && echo "DBG.KEYS: $keys" && echo
+[ $DBG ] && echo "DBG.WGET.exitcode: $excode" && echo "DBG.JSON: $json" && echo "DBG.KEYS: $keys" && echo
 
 # python code to process json
 #
@@ -81,10 +83,13 @@ def str2float(s, j='unit'):
 try: j = json.loads(r'$json')
 except json.decoder.JSONDecodeError: sys.exit(-1)
 for key in '$keys'.split(', '):
+    if '$DBG': print('DBG.key:', key, end=' => ')
     vars = dict([ (k, str2float(v, '%')) for k,v in j.items() ])
     v = eval(key, vars)
     print(round(v))
+if '$DBG': print('DBG.UPTIME:', end=' ')
 print('?')
+if '$DBG': print('DBG.HOST:', end=' ')
 print('$host')
 ___
 )
