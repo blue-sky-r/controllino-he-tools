@@ -3,6 +3,8 @@
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.03.23.1 + dashboard 1.2.1 - 1.3.4
 #  firmware_version: raspbian bionic 2022.04.27.0 + dashboard 1.3.5
+#  firmware_version: raspbian bionic 2022.05.10.0 + dashboard 1.3.5
+#  firmware_version: raspbian bionic 2022.05.11.0 + dashboard 1.3.5
 
 # about
 #
@@ -10,7 +12,7 @@ _about_="mrtg probe to graph He miner disk/cpu usage/load"
 
 # version
 #
-_version_="2022.05.10"
+_version_="2022.05.12"
 
 # github
 #
@@ -82,11 +84,15 @@ def str2float(s, j='unit'):
 
 try: j = json.loads(r'$json')
 except json.decoder.JSONDecodeError: sys.exit(-1)
-for key in '$keys'.split(', '):
-    if '$DBG': print('DBG.key:', key, end=' => ')
+if j.get('status') and j.get('message'):
+    print('status:', j.get('status'))
+    print('message:', j.get('message'))
+else:
     vars = dict([ (k, str2float(v, '%')) for k,v in j.items() ])
-    v = eval(key, vars)
-    print(round(v))
+    for key in '$keys'.split(', '):
+        if '$DBG': print('DBG.key:', key, end=' => ')
+        v = eval(key, vars)
+        print(round(v))
 if '$DBG': print('DBG.UPTIME:', end=' ')
 print('?')
 if '$DBG': print('DBG.HOST:', end=' ')
