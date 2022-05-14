@@ -3,6 +3,7 @@
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.03.23.1 + dashboard 1.2.1 - 1.3.4
 #  firmware_version: raspbian bionic 2022.04.27.0 + dashboard 1.3.5
+#  firmware_version: raspbian bionic 2022.05.10.0 - 2022.05.13.0 + dashboard 1.3.5
 
 # about
 #
@@ -82,12 +83,15 @@ pycode=$( cat <<___
 import sys,json
 try: j = json.loads(r'$json')
 except json.decoder.JSONDecodeError: sys.exit(-1)
-if j.get('status') != 200: sys.exit(-2)
-vars = j.get('rewards')
-for key in '$keys'.split(', '):
-    if '$DBG': print('DBG.key:', key, end=' => ')
-    v = eval(key, vars)
-    print(round(v))
+if j.get('status') != 200:
+    print('status:', j.get('status'))
+    print('message:', j.get('message'))
+else:
+    vars = j.get('rewards')
+    for key in '$keys'.split(', '):
+        if '$DBG': print('DBG.key:', key, end=' => ')
+        v = eval(key, vars)
+        print(round(v))
 if '$DBG': print('DBG.UPTIME:', end=' ')
 print('?')
 if '$DBG': print('DBG.HOST:', end=' ')
