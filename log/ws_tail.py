@@ -19,33 +19,39 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.04.28'
+__VERSION__ = '2022.05.14'
 
 # miner config
 #
 MINER = {
     'controllino': {
-        'fw': '1.3.1',
+        'fw': '1.3.5',
         'console.log': {
             'open': 'initconsolelog/console',
-            'port': 7878,
+            'port': 7878
         },
         'error.log': {
             'open': 'initconsolelog/error',
-            'port': 7879,
+            'port': 7879
         },
         'process.log': {
             'open': 'processlog'
         },
         'classify': {
-            # 2022-04-28 20:24:07.116 7 [notice] <0.12157.58>@libp2p_yamux_session:handle_info:{189,5} Session liveness failure
-            'line': re.compile(r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \d '
-                                '\[(?P<level>\w+)\] '
-                                '<[\d.]+>@(?P<call>\w+:\w+):\{(?P<loc>\d+,\d+)\} '
-                                '(?P<msg>.+)$'),
-            # @miner_lora:handle_json_data:{564,5} got status #{<<"ackr">> => 100.0,<<"dwnb">> => 0,<<"rxfw">> => 0,<<"rxnb">> => 0,<<"rxok">> => 0,<<"temp">> => 30.0,<<"time">> => <<"2022-04-28 21:32:19 GMT">>,<<"txnb">> => 0}
-            # @miner_lora:handle_json_data:{565,5} Gateway #gateway{mac=12273815315514654720,ip={127,0,0,1},port=55215,sent=0,received=175512,dropped=0,status=#{<<"ackr">> => 100.0,<<"dwnb">> => 0,<<"rxfw">> => 0,<<"rxnb">> => 0,<<"rxok">> => 0,<<"temp">> => 30.0,<<"time">> => <<"2022-04-28 21:32:19 GMT">>,<<"txnb">> => 0},rtt_samples=[],rtt=5000000}
-            'miner_lora:handle_json_data:': ''
+            'console.log': {
+                # 2022-04-28 20:24:07.116 7 [notice] <0.12157.58>@libp2p_yamux_session:handle_info:{189,5} Session liveness failure
+                'line': re.compile(r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \d '
+                                   '\[(?P<level>\w+)\] '
+                                   '<[\d.]+>@(?P<call>\w+:\w+):\{(?P<loc>\d+,\d+)\} '
+                                   '(?P<msg>.+)$'),
+            },
+            'error.log': {
+                # 2022-05-12 13:49:40.460 [error] <0.32357.0>@libp2p_stream_relay:handle_server_data:{193,13} fail to pass request
+                'line': re.compile(r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) '
+                                   '\[(?P<level>\w+)\] '
+                                   '<[\d.]+>@(?P<call>\w+:\w+):\{(?P<loc>\d+,\d+)\} '
+                                   '(?P<msg>.+)$'),
+            },
         }
     }
 }
@@ -93,14 +99,14 @@ class WSClient:
     def __init__(self, host, logname, minercfg):
         self.miner_cfg = minercfg
         self.ws_server = self.ws_host(host)
-        self.follow    = self.follow_log(logname)
-        self.classifier =  Classifier(minercfg.get('classify'))
+        self.follow    = self.log_name(logname)
+        self.classifier =  Classifier(minercfg['classify'].get(self.follow))
 
     def ws_host(self, host, proto='ws'):
         """ add protocol/scheme to the host if not already there """
         return host if host.startswith(proto) else '%s://%s' % (proto, host)
 
-    def follow_log(self, logname):
+    def log_name(self, logname):
         """ set full logname from shorted version: err -> error.log """
         if logname.startswith('con'): return 'console.log'
         if logname.startswith('err'): return 'error.log'
@@ -123,7 +129,8 @@ class WSClient:
                 time.sleep(sleep)
 
     def on_message(self, ws, message):
-        print(self.loop, message)
+        #print(self.loop, message)
+        print(message)
         self.classifier.classify(message)
         #print(self.classifier.stat)
 
