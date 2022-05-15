@@ -2,8 +2,7 @@
 
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.03.23.1 + dashboard 1.2.1 - 1.3.4
-#  firmware_version: raspbian bionic 2022.04.27.0 + dashboard 1.3.5
-#  firmware_version: raspbian bionic 2022.05.10.0 - 2022.05.13.0 + dashboard 1.3.5
+#  firmware_version: raspbian bionic 2022.04.27.0 - 2022.05.13.0 + dashboard 1.3.5
 
 # about
 #
@@ -11,7 +10,7 @@ _about_="mrtg probe to graph He miner rewards"
 
 # version
 #
-_version_="2022.05.11"
+_version_="2022.05.15"
 
 # github
 #
@@ -25,9 +24,13 @@ host="controllinohotspot"
 #
 days=1
 
+# multiplication koeff to get integer
+#
+km='1E3'
+
 # json response keys to expressions to eveluate to display in this order
 #
-keys="sum, avg * 1E9"
+keys="total * $km, avg * $km"
 
 # wget options
 #
