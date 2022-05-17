@@ -4,28 +4,28 @@
 #
 # requires: sudo pip3 install websocket-client # https://github.com/websocket-client/websocket-client
 #
+#
 
-# tail --follow console.log (long par version):
+# for tail --follow console.log (long par version) use:
 # ws_tail.py --follow console.log ws://controllinohotspot
 #
-# tail -f error.log (short par version):
+# for tail -f error.log (short par version) use:
 # ws_tail.py -f err controllinohotspot
 
 import websocket
 import urllib.request
 import json
 import argparse
-import re
-import signal
+import sys
 import time
 
-__VERSION__ = '2022.05.16'
+__VERSION__ = '2022.05.17'
 
 # miner config
 #
 MINER = {
     'controllino': {
-        'fw': '1.3.5',
+        'dashboard': '1.3.5',
         'console.log': {
             'open': 'initconsolelog/console',
             'port': 7878
@@ -94,8 +94,9 @@ class WSClient:
         dbg('tl', '= ERR = %s = %s' % (exc, ws.url))
 
     def on_close(self, ws, close_status_code, close_msg):
-        if close_status_code and close_msg:
-            dbg('tl', "= websocket connection closed = [ %d ] %s" % (close_status_code, close_msg))
+        if not close_status_code: close_status_code = '?'
+        if not close_msg: close_msg = '?'
+        dbg('tl', "= websocket connection closed = [ %d ] %s" % (close_status_code, close_msg))
 
     def on_open(self, ws):
         dbg('tl', "= websocket connection opened = %s" % ws.url)
@@ -111,24 +112,31 @@ class WSClient:
                                     on_message=self.on_message,
                                     on_error=self.on_error,
                                     on_close=self.on_close)
-            if not ws.run_forever(): break
             # ^C= ERR =  = ws://controllinohotspot:7878, teardown= False
             # = ERR = Connection to remote host was lost. = ws://controllinohotspot:7878, teardown= True
-        dbg('tl', '=== loop end - maxloop limit %d exceeded ===' % maxloops)
+            # break only on CRTL-C and not on ws errors
+            if not ws.run_forever(): break
         # === loop: 9 = ERR = [Errno 111] Connection refused = ws://controllinohotspot:7878
+        dbg('tl', '=== loop end = loop %d of maxloop %d ===' % (self.loop, maxloops))
 
 if __name__ == "__main__":
     # cli pars
-    parser = argparse.ArgumentParser(description='tail remote log from host/miner via websocket connection',
+    parser = argparse.ArgumentParser(description='tail remote log from host/miner via websocket connection ver %s' % __VERSION__,
                                      epilog='example: ws_tail.py -f console.log controllinohotspot')
-    parser.add_argument('wserver', metavar='[ws[s]://]host', help='websocket server to connect to')
-    parser.add_argument('-f', '--follow', metavar='name',    default='', required=False,
+    parser.add_argument('wserver', metavar='[ws[s]://]host',
+                        help='websocket server to connect to')
+    parser.add_argument('-f', '--follow', metavar='name', required=True,
                         help='follow log name (con[sole[.log]] or err[or[.log]])')
     parser.add_argument('-d', '--debug',  metavar='c1[,c2]', default='', required=False,
                         help='enable debug for component (par for pars, tl for tail, ws for websocket)')
     args = parser.parse_args()
     DBGMODE = args.debug
     if 'ws' in DBGMODE: websocket.enableTrace(True)
+
+    # show usage if no args given
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
 
     # websocket client
     wsc = WSClient(host=args.wserver, logname=args.follow, minercfg=MINER['controllino'])
