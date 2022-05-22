@@ -2,7 +2,7 @@
 #
 # websocket ping
 
-__version__ = '2022.05.22'
+__version__ = '2022.05.23'
 
 import datetime
 import argparse
@@ -43,14 +43,18 @@ class Ws_ping:
         if self.verbose: print("OPEN %s" % wsapp.url)
 
     def on_close(self, wsapp, close_status_code, close_msg):
-        if not close_status_code: close_status_code = '?'
-        if not close_msg: close_msg = '?'
-        if self.verbose: print("CLOSE websocket connection = [ %s ] %s" % (close_status_code, close_msg))
+        if close_status_code and close_msg and self.verbose:
+            print("CLOSE websocket connection = [ %s ] %s" % (close_status_code, close_msg))
 
     def on_error(self, wsapp, err):
+        # catch CTRL-C
+        if isinstance(err, KeyboardInterrupt):
+            if self.verbose: print("= CTRl-C received =")
+            wsapp.keep_running = False
+            return
         # = ERR = ping/pong timed out = ws://controllinohotspot:7878
         self.stat['recerr'] += 1
-        if self.verbose: print('= ERR = %s = %s' % (err, wsapp.url))
+        if self.verbose: print('= ERR = [%s] = %s' % (err, wsapp.url))
         print(self.now_ymd_hms(), "pong seq# %d error %s" % (self.seq, err))
         self.seq += 1
 
@@ -64,8 +68,9 @@ class Ws_ping:
         """ pong replay received """
         round_time_ms = (wsapp.last_pong_tm - wsapp.last_ping_tm) * 1000
         self.update_stats(round_time_ms)
-        print(self.now_ymd_hms(), "pong seq# %d received in %.2f ms" % (self.seq, round_time_ms))
-        if self.count and self.seq >= self.count:
+        print(self.now_ymd_hms(), "pong seq# %3d received in %.2f ms" %
+              (self.seq, round_time_ms), '\07' if self.audible else '')
+        if self.count and (self.seq >= self.count):
             wsapp.keep_running = False
         self.seq += 1
 
@@ -119,10 +124,13 @@ class Ws_ping:
                                        on_error=self.on_error,
                                        on_message=self.on_message,
                                        on_ping=self.on_ping, on_pong=self.on_pong)
-        while self.stat['recok'] + self.stat['recerr'] < self.count:
+        # infinite loop (count==0) or loop until sent(err+ok)==count
+        while (self.count == 0) or (self.stat['recok'] + self.stat['recerr'] < self.count):
             wsapp.run_forever(ping_interval=self.interval,
                           ping_timeout=self.wait,
                           ping_payload=self.payload)
+            # break loop on CRTL-C
+            if not wsapp.keep_running: break
         # stats
         self.print_stats()
 
@@ -165,8 +173,10 @@ def parse_args():
     return parser.parse_args()
 
 
-args = parse_args()
-wsp = Ws_ping(args)
-wsp.run()
+if __name__ == '__main__':
+
+    args = parse_args()
+    wsp = Ws_ping(args)
+    wsp.run()
 
 
