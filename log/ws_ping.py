@@ -2,6 +2,8 @@
 #
 # websocket ping
 
+__version__ = '2022.05.22'
+
 import datetime
 import argparse
 import websocket
@@ -29,28 +31,34 @@ class Ws_ping:
         self.payload = args.payload
         self.wait = args.wait
         self.timeout = args.timeout
+        self.verbose = args.verbose
+        self.debug = args.debug
         self.seq = 1
-        self.stat = { 'min': 9999, 'max': 0, 'cnt': 0, 'sum': 0 }
+        self.stat = { 'min': 9999, 'max': 0, 'recok': 0, 'recerr': 0, 'sum': 0 }
 
     def now_ymd_hms(self):
         return datetime.datetime.now().strftime(self.datefmt)
 
     def on_open(self, wsapp):
-        print("open %s" % wsapp.url)
+        if self.verbose: print("OPEN %s" % wsapp.url)
 
     def on_close(self, wsapp, close_status_code, close_msg):
         if not close_status_code: close_status_code = '?'
         if not close_msg: close_msg = '?'
-        print("websocket connection closed = [ %s ] %s" % (close_status_code, close_msg))
+        if self.verbose: print("CLOSE websocket connection = [ %s ] %s" % (close_status_code, close_msg))
 
     def on_error(self, wsapp, err):
-        print('= ERR = %s = %s' % (err, wsapp.url))
+        # = ERR = ping/pong timed out = ws://controllinohotspot:7878
+        self.stat['recerr'] += 1
+        if self.verbose: print('= ERR = %s = %s' % (err, wsapp.url))
+        print(self.now_ymd_hms(), "pong seq# %d error %s" % (self.seq, err))
+        self.seq += 1
 
     def on_message(self, wsapp, message):
-        print(message)
+        if self.verbose: print(message)
 
     def on_ping(self, wsapp, message):
-        print("ping received")
+        if self.verbose: print("PING received")
 
     def on_pong(self, wsapp, message):
         """ pong replay received """
@@ -66,7 +74,7 @@ class Ws_ping:
         self.stat['min'] = self.stat['min'] if self.stat['min'] < val else val
         self.stat['max'] = self.stat['max'] if self.stat['max'] > val else val
         self.stat['sum'] += val
-        self.stat['cnt'] += 1
+        self.stat['recok'] += 1
 
     def print_stats(self):
         """ final statistics """
@@ -95,22 +103,24 @@ class Ws_ping:
         # --- controllinohotspot.local ping statistics ---
         print('--- %s websocket ping statistics ---' % self.url)
         # 10 packets transmitted, 10 received, 0% packet loss, time 9013ms
+        sent = self.stat['recok'] + self.stat['recerr']
         print("%d pings sent, %d pongs received, %.2f%% packet loss, total rtt is %s" %
-              (self.count, self.stat['cnt'], 100 - percent(self.stat['cnt'], self.stat['cnt']), hms(self.stat['sum'])))
+              (sent, self.stat['recok'], 100 - percent(self.stat['recok'], sent), hms(self.stat['sum'])))
         # rtt min/avg/max/mdev = 0.034/0.035/0.037/0.001 ms
-        print("rtt min/avg/max = %.3f/%.3f/%.3f ms" %
-              (self.stat['min'], self.stat['sum']/self.stat['cnt'], self.stat['max']))
+        print("rtt min/avg/max/sum = %.3f/%.3f/%.3f/%.3f ms" %
+              (self.stat['min'], self.stat['sum']/self.stat['recok'] if self.stat['recok']>0 else 1, self.stat['max'], self.stat['sum']))
 
     def run(self):
         """ """
+        websocket.enableTrace(self.debug)
         websocket.setdefaulttimeout(self.timeout)
         wsapp = websocket.WebSocketApp(self.url,
                                        on_open=self.on_open, on_close=self.on_close,
                                        on_error=self.on_error,
                                        on_message=self.on_message,
                                        on_ping=self.on_ping, on_pong=self.on_pong)
-        # websocket.enableTrace(True)
-        wsapp.run_forever(ping_interval=self.interval,
+        while self.stat['recok'] + self.stat['recerr'] < self.count:
+            wsapp.run_forever(ping_interval=self.interval,
                           ping_timeout=self.wait,
                           ping_payload=self.payload)
         # stats
@@ -127,7 +137,7 @@ def parse_args():
         return arg_value
 
     # https://docs.python.org/3/library/argparse.html#module-argparse
-    parser = argparse.ArgumentParser(description="WebSocket ping",
+    parser = argparse.ArgumentParser(description="WebSocket ping vesrion %s" % __version__,
                                      epilog="example: ws_ping -c 100 ws://controllinohotspot:7878",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("url", metavar="ws_url", type=valid_url,
@@ -136,8 +146,8 @@ def parse_args():
                         help="audible ping (bel)")
     parser.add_argument("-c", "--count", metavar="limit", default=0, type=int,
                         help="send only limited count of ping probes, 0 for unlimited")
-    parser.add_argument("-D", "--datetime", metavar='"format"', nargs='?', default=DEFAULTS.get('datetime'),
-                        help="print timestamps with optional format string")
+    parser.add_argument("-D", "--datetime", metavar='"format"', default=DEFAULTS.get('datetime'),
+                        help="format string for timestamps")
     parser.add_argument("-i", "--interval", metavar="secs", type=int, default=DEFAULTS.get('interval'),
                         help="seconds between sending each packet")
     parser.add_argument("-p", "--payload", metavar='"string"', type=str, default=DEFAULTS.get('payload'),
@@ -145,7 +155,9 @@ def parse_args():
     parser.add_argument("-q", "--quiet", action="store_true",
                         help="quiet output")
     parser.add_argument("-v", "--verbose", action='store_true',
-                        help="verbose output")
+                        help="websock verbose output")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="websock debug output")
     parser.add_argument("-w", "--wait", metavar="secs", type=float, default=DEFAULTS.get('wait'),
                         help="pong reply wait timeout, must be lower than interval")
     parser.add_argument("-W", "--timeout", metavar="secs", type=float, default=DEFAULTS.get('timeout'),
