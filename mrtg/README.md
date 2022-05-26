@@ -89,7 +89,7 @@ Short usage help invoked by -h:
     
     https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-ram-temp.sh
 
-Example of mrtg weekly graph:
+Example of mrtg monthly graph:
 
 ![screenshot](../screenshot/mrtg-ram-temp.jpg)
 
