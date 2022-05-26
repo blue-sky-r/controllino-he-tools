@@ -62,11 +62,36 @@ Short usage help can be invoked by -h parameter. Detailed debug mode is availabl
 
 Here are some controllino probes to visualize various metrics in [mrtg](https://oss.oetiker.ch/mrtg/):
 
-  * [HNT rewards](mrtg-he-rewards.sh) - mrtg probe to retrieve HNT rewards for time period
-  
-  * [RAM usage / CPU temperature](mrtg-he-ram-temp.sh) - mrtg probe to retrieve RAM utilization and CPU temperature
+  * [RAM usage / CPU temperature](#mrtg--he-ram-temp) - mrtg probe to retrieve RAM utilization and CPU temperature
 
-  * [blockchain height](mrtg-he-height.sh) - mrtg probe to retrieve blockchain height
+  * [HNT rewards](#mrtg--he-rewards) - mrtg probe to retrieve HNT rewards for time period
+  
+  * [blockchain height](#mrtg--he-height) - mrtg probe to retrieve blockchain height (graphs delta)
+
+#### mrtg - RAM usage / CPU temperature 
+
+Script [mrtg-he-ram-temp.sh](mrtg-he-ram-temp.sh) retrieves RAM usage and CPU temperature
+(defined by json keys variable in config section at the top of the script).
+Instead of getting used RAM as absolute value we use a formula to calculate RAM usage in percent.
+For this we need available RAM for miner container (we assume 4GB defined as HeRAM variable)
+
+Short usage help invoked by -h:
+
+    mrtg$ ./mrtg-he-ram-temp.sh -h
+    
+    = mrtg probe to graph He miner disk/cpu usage/load = ver 2022.05.12 =
+    
+    usage: ./mrtg-he-ram-temp.sh [-h] [-d] [host]
+    
+    -h   ... show this usage help
+    -d   ... additional debug info
+    host ... host/miner to connect to (default controllinohotspot)
+    
+    https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-ram-temp.sh
+
+Example of mrtg weekly graph:
+
+![screenshot](../screenshot/mrtg-ram-temp.jpg)
 
 #### mrtg - HNT Rewards 
 
@@ -98,6 +123,30 @@ Short usage help invoked by -h:
 Example of mrtg weekly graph:
 
 ![screenshot](../screenshot/mrtg-rewards.jpg)
+
+#### mrtg - blockchain height
+
+Script [mrtg-he-height.sh](mrtg-he-rewards.sh) retrieves blockchain helium_height and miner_height 
+(defined by json keys variable in config section at the top of the script). Mrtg graphs
+blockchain height delta values (mrtg counter), which are more representative than absolute height values.
+
+Short usage help invoked by -h:
+
+    mrtg$ ./mrtg-he-height.sh -h
+    
+    = mrtg probe to graph He miner blockchain height = ver 2022.05.08 =
+    
+    usage: ./mrtg-he-height.sh [-h] [-d] [host]
+    
+    -h   ... show this usage help
+    -d   ... additional debug info
+    host ... host/miner to connect to (default controllinohotspot)
+    
+    https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-height.sh
+
+Example of mrtg monthly graph:
+
+![screenshot](../screenshot/mrtg-height.jpg)
 
 
 ### Troubleshooting
