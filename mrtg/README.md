@@ -68,6 +68,8 @@ Here are some controllino probes to visualize various metrics in [mrtg](https://
   
   * [blockchain height](#mrtg--he-height) - mrtg probe to retrieve blockchain height (graphs delta)
 
+  * [disk usage and CPU load](#mrtg--he-load) - mrtg probe to retrieve disk usage and CPU load
+
 #### mrtg - RAM usage / CPU temperature 
 
 Script [mrtg-he-ram-temp.sh](mrtg-he-ram-temp.sh) retrieves RAM usage and CPU temperature
@@ -148,6 +150,31 @@ Example of mrtg monthly graph:
 
 ![screenshot](../screenshot/mrtg-height.jpg)
 
+#### mrtg - disk usage and CPU load
+
+Script [mrtg-he-load.sh](mrtg-he-rewards.sh) retrieves SD card disk usage and CPU load 
+(defined by json keys variable in config section at the top of the script). As both values
+are in range between 20 to 100 no other processing is required (SD card disk usage is in percent 0-100% and 
+CPU temperature is 20C-100C). When SD card is full aroung 90% controllino itself initiate
+data cleanup (visible on mrtg graph)
+
+Short usage help invoked by -h:
+
+    mrtg$ ./mrtg-he-load.sh -h
+    
+    = mrtg probe to graph He miner disk/cpu usage/load = ver 2022.05.10 =
+    
+    usage: ./mrtg-he-load.sh [-h] [-d] [host]
+    
+    -h   ... show this usage help
+    -d   ... additional debug info
+    host ... host/miner to connect to (default controllinohotspot)
+    
+    https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-load.sh
+
+Example of mrtg monthly graph:
+
+![screenshot](../screenshot/mrtg-sd-cpu-load.jpg)
 
 ### Troubleshooting
 
