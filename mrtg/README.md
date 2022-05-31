@@ -62,13 +62,13 @@ Short usage help can be invoked by -h parameter. Detailed debug mode is availabl
 
 Here are some controllino probes to visualize various metrics in [mrtg](https://oss.oetiker.ch/mrtg/):
 
-  * [RAM usage / CPU temperature](#mrtg--he-ram-temp) - mrtg probe to retrieve RAM utilization and CPU temperature
+  * [RAM usage / CPU temperature](#mrtg---ram-usage--cpu-temperature) - mrtg probe to retrieve RAM utilization and CPU temperature
 
-  * [HNT rewards](#mrtg--he-rewards) - mrtg probe to retrieve HNT rewards for time period
+  * [HNT rewards](#mrtg---hnt-rewards) - mrtg probe to retrieve HNT rewards for time period
   
-  * [blockchain height](#mrtg--he-height) - mrtg probe to retrieve blockchain height (graphs delta)
+  * [blockchain height](#mrtg---blockchain-height) - mrtg probe to retrieve blockchain height (graphs delta)
 
-  * [disk usage and CPU load](#mrtg--he-load) - mrtg probe to retrieve disk usage and CPU load
+  * [SD card usage and CPU load](#mrtg---disk-usage-and-cpu-load) - mrtg probe to retrieve disk usage and CPU load
 
 #### mrtg - RAM usage / CPU temperature 
 
