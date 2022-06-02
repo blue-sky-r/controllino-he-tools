@@ -3,6 +3,7 @@
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.03.23.1 + dashboard 1.2.1 - 1.3.4
 #  firmware_version: raspbian bionic 2022.04.27.0 - 2022.05.13.0 + dashboard 1.3.5
+#  firmware_version: raspbian bionic 2022.05.19.0 - 2022.06.01.0 + dashboard 1.3.6
 
 # about
 #
