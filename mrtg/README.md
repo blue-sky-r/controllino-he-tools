@@ -21,7 +21,7 @@ A few interesting facts about Your expensive controllino miner:
 
 ### Requirements
 
-All mrtg probes are shell scripts:
+All mrtg probes are shell scripts using:
 
 * bash - script parameters and flow handling
 
@@ -33,7 +33,7 @@ All mrtg probes are shell scripts:
     All published scripts do not require remote ssh / snmp access and work 
     with unmodified / untouched original controllino hardware and software
 
-### firmware updates
+### firmware updates warning
 
 The implementation of all mrtg probes is utilizing existing very limited unofficial 
 and undocumented controllino HTTP API
@@ -41,7 +41,7 @@ and undocumented controllino HTTP API
     Please note that implemented scripts are highly firmware version dependent and might 
     stop working on the next firmware update without any warning
 
-### mrtg probes
+### mrtg probes - external scripts
 
 Each probe script retrieves data via HTTP API request and formats selecteed values into mrtg
 4-line format to be seamlessly processed by mrtg tool. You can find more details in any [mrtg doc](https://oss.oetiker.ch/mrtg/doc/mrtg-reference.en.html):
@@ -62,15 +62,15 @@ Short usage help can be invoked by -h parameter. Detailed debug mode is availabl
 
 Here are some controllino probes to visualize various metrics in [mrtg](https://oss.oetiker.ch/mrtg/):
 
-  * [RAM usage / CPU temperature](#mrtg---ram-usage--cpu-temperature) - mrtg probe to retrieve RAM utilization and CPU temperature
+  * [RAM usage / CPU temperature](#mrtg-probe--ram-usage--cpu-temperature) - mrtg probe to retrieve RAM utilization and CPU temperature
 
-  * [HNT rewards](#mrtg---hnt-rewards) - mrtg probe to retrieve HNT rewards for time period
+  * [HNT rewards](#mrtg-probe--hnt-rewards) - mrtg probe to retrieve HNT rewards for time period
   
-  * [blockchain height](#mrtg---blockchain-height) - mrtg probe to retrieve blockchain height (graphs delta)
+  * [blockchain height](#mrtg-probe--blockchain-height) - mrtg probe to retrieve blockchain height (graphs delta)
 
-  * [SD card usage and CPU load](#mrtg---disk-usage-and-cpu-load) - mrtg probe to retrieve disk usage and CPU load
+  * [SD card usage and CPU load](#mrtg-probe--disk-usage-and-cpu-load) - mrtg probe to retrieve disk usage and CPU load
 
-#### mrtg - RAM usage / CPU temperature 
+#### mrtg probe - RAM usage / CPU temperature 
 
 Script [mrtg-he-ram-temp.sh](mrtg-he-ram-temp.sh) retrieves RAM usage and CPU temperature
 (defined by json keys variable in config section at the top of the script).
@@ -95,7 +95,7 @@ Example of mrtg monthly graph:
 
 ![screenshot](../screenshot/mrtg-ram-temp.jpg)
 
-#### mrtg - HNT Rewards 
+#### mrtg probe - HNT Rewards 
 
 Script [mrtg-he-rewards.sh](mrtg-he-rewards.sh) retrieves total and average HNT rewards
 (defined by json keys variable in config section at the top of the script).
@@ -126,7 +126,7 @@ Example of mrtg weekly graph:
 
 ![screenshot](../screenshot/mrtg-rewards.jpg)
 
-#### mrtg - blockchain height
+#### mrtg probe - blockchain height
 
 Script [mrtg-he-height.sh](mrtg-he-rewards.sh) retrieves blockchain helium_height and miner_height 
 (defined by json keys variable in config section at the top of the script). Mrtg graphs
@@ -150,7 +150,7 @@ Example of mrtg monthly graph:
 
 ![screenshot](../screenshot/mrtg-height.jpg)
 
-#### mrtg - disk usage and CPU load
+#### mrtg probe - SD card usage and CPU load
 
 Script [mrtg-he-load.sh](mrtg-he-rewards.sh) retrieves SD card disk usage and CPU load 
 (defined by json keys variable in config section at the top of the script). As both values
