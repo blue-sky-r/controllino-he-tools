@@ -4,7 +4,9 @@
 #
 # requires: sudo pip3 install websocket-client # https://github.com/websocket-client/websocket-client
 #
-#
+# Note: retrieving controllino miner log keeps dying silently while websocket connection is alive (responding to ping-pong)
+# so there is a trick with counting log messages (lines) between pings. If number of received messages between two
+# pings is zero, websocket connection is closed and reopened again (this trick works well so far)
 
 # for tail --follow console.log (long par version) use:
 # ws_tail.py --follow console.log ws://controllinohotspot
@@ -19,7 +21,7 @@ import argparse
 import sys
 import time, datetime
 
-__VERSION__ = '2022.07.05'
+__VERSION__ = '2022.07.06'
 
 # miner config
 #
@@ -71,7 +73,7 @@ class WSClient:
         return logname
 
     def ping_par(self, pingcsv):
-        """ x """
+        """ process comma separated ping cli string pars interval,timeout,payload """
         val = pingcsv.split(',')
         return {
             'ping_interval': int(val[0]) if len(val) >= 1 else  0,
@@ -81,6 +83,7 @@ class WSClient:
 
     def log_init(self, tries=10, sleep=5):
         """ initialize websocket via http - controllino specific """
+        self.lines = 0
         url = ''.join([ self.ws_server.replace('ws','http'), '/', self.miner_cfg[self.follow]['open'] ])
         for attempt in range(1, tries+1):
             try:
@@ -95,8 +98,13 @@ class WSClient:
                 dbg('tl', '= ERR = log_init() attempt %d = %s' % (attempt, e.reason))
                 time.sleep(sleep)
 
+    def ws_close(self, ws, status=websocket.STATUS_NORMAL):
+        """ close websocket connection with status """
+        dbg('tl', '= ws_close() with status %d' % status)
+        ws.close(status=status)
+
     def on_message(self, ws, message):
-        #print(self.loop, message)
+        self.lines += 1
         print(message)
 
     def on_error(self, ws, exc):
@@ -115,33 +123,32 @@ class WSClient:
         dbg('tl', "ping received = %s" % message)
 
     def on_pong(self, ws, message):
-        dbg('tl', "pong received = %s" % message)
-        #self.log_init()
+        dbg('tl', "pong received = %s = %d messages since last pong =" % (message, self.lines))
+        lines = self.lines
+        self.lines = 0
+        if lines == 0:
+            self.ws_close(ws, status=websocket.STATUS_NORMAL)
+            self.run()
 
-    def run(self, maxloops=10):
+    def run(self):
         """ open logfile and loop forever """
+        if not self.log_init(): return
         wsurl = '%s:%d' % (self.ws_server, self.miner_cfg.get(self.follow).get('port'))
-        for self.loop in range(1, maxloops+1):
-            dbg('tl', '=== loop: %d ===' % self.loop)
-            if not self.log_init(): break
-            ws = websocket.WebSocketApp(wsurl,
-                                    on_open=self.on_open,
-                                    on_ping=self.on_ping,
-                                    on_pong=self.on_pong,
-                                    on_message=self.on_message,
-                                    on_error=self.on_error,
-                                    on_close=self.on_close)
-            # ^C= ERR =  = ws://controllinohotspot:7878, teardown= False
-            # = ERR = Connection to remote host was lost. = ws://controllinohotspot:7878, teardown= True
-            # break only on CRTL-C and not on ws errors
-            if not ws.run_forever(ping_interval=self.ping['ping_interval'],
-                                  ping_timeout =self.ping['ping_timeout'],
-                                  ping_payload =self.ping['ping_payload']):
-                break
-            # send close status back - https://datatracker.ietf.org/doc/html/rfc6455#section-7.4
-            ws.close(status=websocket.STATUS_PROTOCOL_ERROR)
-        # === loop: 9 = ERR = [Errno 111] Connection refused = ws://controllinohotspot:7878
-        dbg('tl', '=== loop end = loop %d of maxloop %d ===' % (self.loop, maxloops))
+        ws = websocket.WebSocketApp(wsurl,
+                            on_open=self.on_open,
+                            on_ping=self.on_ping,
+                            on_pong=self.on_pong,
+                            on_message=self.on_message,
+                            on_error=self.on_error,
+                            on_close=self.on_close)
+        # ^C= ERR =  = ws://controllinohotspot:7878, teardown= False
+        # = ERR = Connection to remote host was lost. = ws://controllinohotspot:7878, teardown= True
+        # break only on CRTL-C and not on ws errors
+        ws.run_forever(ping_interval=self.ping['ping_interval'],
+                          ping_timeout =self.ping['ping_timeout'],
+                          ping_payload =self.ping['ping_payload'])
+        # send close status back - https://datatracker.ietf.org/doc/html/rfc6455#section-7.4
+        self.ws_close(ws, status=websocket.STATUS_PROTOCOL_ERROR)
 
 if __name__ == "__main__":
     # cli pars
@@ -151,8 +158,8 @@ if __name__ == "__main__":
                         help='websocket server to connect to')
     parser.add_argument('-f', '--follow', metavar='name', required=True,
                         help='follow log name (con[sole[.log]] or err[or[.log]])')
-    parser.add_argument('-p', '--ping',  metavar='int[,tout]', default='', required=False,
-                        help='enable periodic ping with interval int seconds and timeout tout seconds')
+    parser.add_argument('-p', '--ping',  metavar='int[,tout[,payload]]', default='', required=False,
+                        help='enable periodic ping with interval int seconds and timeout tout seconds with string payload')
     parser.add_argument('-d', '--debug',  metavar='c1[,c2]', default='', required=False,
                         help='enable debug for component (par for pars, tl for tail, ws for websocket)')
     args = parser.parse_args()
