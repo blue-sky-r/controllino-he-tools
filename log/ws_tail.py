@@ -6,13 +6,15 @@
 #
 # Note: retrieving controllino miner log keeps dying silently while websocket connection is alive (responding to ping-pong)
 # so there is a trick with counting log messages (lines) between pings. If number of received messages between two
-# pings is zero, websocket connection is closed and reopened again (this trick works well so far)
-
-# for tail --follow console.log (long par version) use:
-# ws_tail.py --follow console.log ws://controllinohotspot
+# pings is zero, websocket connection is closed and reopened again (this trick works well so far for controllino)
 #
-# for tail -f error.log (short par version) use:
+
+# for tail --follow console.log and ping/pong each 90sec with 5sec timeout (long par version) use:
+# ws_tail.py --follow console.log --ping 90,5 ws://controllinohotspot
+#
+# for tail -f error.log without ping/pong (short par version) use:
 # ws_tail.py -f err controllinohotspot
+#
 
 import websocket
 import urllib.request
@@ -21,13 +23,13 @@ import argparse
 import sys
 import time, datetime
 
-__VERSION__ = '2022.07.06'
+__VERSION__ = '2022.07.07'
 
 # miner config
 #
 MINER = {
     'controllino': {
-        'dashboard': '1.3.5',
+        'dashboard': '1.3.7',
         'console.log': {
             'open': 'initconsolelog/console',
             'port': 7878
@@ -95,12 +97,12 @@ class WSClient:
                 return code == 200
             except urllib.error.URLError as e:
                 # urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
-                dbg('tl', '= ERR = log_init() attempt %d = %s' % (attempt, e.reason))
+                dbg('tl', 'ERR = log_init() attempt %d = %s' % (attempt, e.reason))
                 time.sleep(sleep)
 
     def ws_close(self, ws, status=websocket.STATUS_NORMAL):
         """ close websocket connection with status """
-        dbg('tl', '= ws_close() with status %d' % status)
+        dbg('tl', 'ws_close() with status %d' % status)
         ws.close(status=status)
 
     def on_message(self, ws, message):
@@ -109,7 +111,7 @@ class WSClient:
 
     def on_error(self, ws, exc):
         """ = ERR = Connection to remote host was lost. = """
-        dbg('tl', '= ERR = %s = %s' % (exc, ws.url))
+        dbg('tl', 'ERR = %s = %s' % (exc, ws.url))
 
     def on_close(self, ws, close_status_code, close_msg):
         if not close_status_code: close_status_code = '?'
@@ -123,7 +125,7 @@ class WSClient:
         dbg('tl', "ping received = %s" % message)
 
     def on_pong(self, ws, message):
-        dbg('tl', "pong received = %s = %d messages since last pong =" % (message, self.lines))
+        dbg('tl', "pong received = %s = %d messages since the last pong =" % (message, self.lines))
         lines = self.lines
         self.lines = 0
         if lines == 0:
