@@ -35,11 +35,16 @@ regexp=.* (\[warning\]) .*
 colours=red, black on_red
 count=more
 ======
+# display ERROR line in bright red
+regexp=.* (\[error\]) .*
+colours=bright_red, black on_bright_red
+count=more
+======
 # this is datetime 2022-05-15 22:49:30.657
 #regexp=^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)
 #colours=green, green, red
 #count=once
-======
+#======
 # call @blockchain_state_channels_client:handle_cast:
 regexp=@\w+:\w+:
 colours=white
