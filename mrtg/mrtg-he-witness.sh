@@ -21,7 +21,7 @@ host="controllinohotspot"
 
 # json message keys to display in this order
 #
-keys="Total witnesses, Succesfully delivered"
+keys="Succesfully delivered, Total witnesses"
 
 # wget options
 #
