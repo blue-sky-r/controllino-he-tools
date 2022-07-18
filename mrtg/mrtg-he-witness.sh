@@ -9,7 +9,7 @@ _about_="mrtg probe to graph He miner General Witnesses Overview"
 
 # version
 #
-_version_="2022.07.17"
+_version_="2022.07.18"
 
 # github
 #
@@ -19,9 +19,9 @@ _github_="https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg
 #
 host="controllinohotspot"
 
-# json message keys to display in this order
+# key eval expressions to display in this order (use '_' instead of space in var names)
 #
-keys="Succesfully delivered, Total witnesses"
+keys="Succesfully_delivered, Total_witnesses"
 
 # wget options
 #
@@ -77,7 +77,7 @@ pycode=$( cat <<___
 import sys,json
 try: j = json.loads(r'$json')
 except json.decoder.JSONDecodeError: sys.exit(-1)
-result = {}
+vars = {}
 if j.get('status') != 200:
     print('status:', j.get('status'))
     print('message:', j.get('message'))
@@ -86,13 +86,14 @@ else:
         if '$DBG': print('DBG.LINE:', line)
         if '=' not in line: continue
         key, val = line.split('=')
-        key, val = key.strip(), val.strip().split()[0].strip()
+        key, val = key.strip().replace(' ', '_'), val.strip().split()[0].strip()
         if '$DBG': print('DBG.RESULT:', key, '=>', val)
-        result[key] = val
+        vars[key] = int(val)
 if '$DBG': print()
-for key in '$keys'.split(', '):
-    if '$DBG': print('DBG.KEY:', key, end=' ')
-    print(result.get(key))
+for expr in '$keys'.split(', '):
+    if '$DBG': print('DBG.EXPR:', expr, end=' = ')
+    v = eval(expr, vars)
+    print(round(v))
 if '$DBG': print('DBG.UPTIME:', end=' ')
 print('?')
 if '$DBG': print('DBG.HOST:', end=' ')
