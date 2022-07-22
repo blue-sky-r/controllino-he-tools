@@ -74,12 +74,15 @@ class WSClient:
         if logname.startswith('err'): return 'error.log'
         return logname
 
-    def ping_par(self, pingcsv, defaults={'ping_interval':0, 'ping_timeout':10, 'ping_payload':'alive'}):
+    def ping_par(self, pingcsv, defaults='0,10,alive?'):
         """ process comma separated ping cli string pars interval,timeout,payload """
-        r = defaults
-        for key,val in zip(["ping_interval", "ping_timeout", "ping_payload"], pingcsv.split(',')):
-            if val != '': r[key] = val
-        return r
+        keys = 'ping_interval,ping_timeout,ping_payload'.split(',')
+        # default values
+        values = dict([ (k,v) for k,v in zip(keys, defaults.split(',')) ])
+        # actual values
+        actual = dict([ (k,v) for k,v in zip(keys, pingcsv.split(',')) if v != '' ])
+        values.update(actual)
+        return values
 
     def log_init(self, tries=10, sleep=5):
         """ initialize websocket via http - controllino specific """
