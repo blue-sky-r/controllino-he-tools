@@ -23,7 +23,7 @@ import argparse
 import sys
 import time, datetime
 
-__VERSION__ = '2022.07.07'
+__VERSION__ = '2022.07.22'
 
 # miner config
 #
@@ -74,14 +74,12 @@ class WSClient:
         if logname.startswith('err'): return 'error.log'
         return logname
 
-    def ping_par(self, pingcsv):
+    def ping_par(self, pingcsv, defaults={'ping_interval':0, 'ping_timeout':10, 'ping_payload':'alive'}):
         """ process comma separated ping cli string pars interval,timeout,payload """
-        val = pingcsv.split(',')
-        return {
-            'ping_interval': int(val[0]) if len(val) >= 1 else  0,
-            'ping_timeout':  int(val[1]) if len(val) >= 2 else 10,
-            'ping_payload':  val[2] if len(val) >= 3 else 'alive?'
-        }
+        r = defaults
+        for key,val in zip(["ping_interval", "ping_timeout", "ping_payload"], pingcsv.split(',')):
+            if val != '': r[key] = val
+        return r
 
     def log_init(self, tries=10, sleep=5):
         """ initialize websocket via http - controllino specific """
