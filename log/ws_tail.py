@@ -23,13 +23,18 @@ import argparse
 import sys
 import time, datetime
 
-__VERSION__ = '2022.07.22'
+__VERSION__ = '2022.07.23'
 
 # miner config
 #
 MINER = {
     'controllino': {
-        'dashboard': '1.3.7',
+        'dashboard': '1.3.9',
+        'ping_defaults': {
+            'ping_interval': 0,
+            'ping_timeout': 10,
+            'ping_payload': 'alive?'
+        },
         'console.log': {
             'open': 'initconsolelog/console',
             'port': 7878
@@ -38,7 +43,6 @@ MINER = {
             'open': 'initconsolelog/error',
             'port': 7879
         },
-        # broken since fw 1.3.4
         'process.log': {
             'open': 'processlog'
         },
@@ -74,15 +78,13 @@ class WSClient:
         if logname.startswith('err'): return 'error.log'
         return logname
 
-    def ping_par(self, pingcsv, defaults='0,10,alive?'):
+    def ping_par(self, pingcsv):
         """ process comma separated ping cli string pars interval,timeout,payload """
-        keys = 'ping_interval,ping_timeout,ping_payload'.split(',')
-        # default values
-        values = dict([ (k,v) for k,v in zip(keys, defaults.split(',')) ])
+        ping = self.miner_cfg['ping_defaults']
         # actual values
-        actual = dict([ (k,v) for k,v in zip(keys, pingcsv.split(',')) if v != '' ])
-        values.update(actual)
-        return values
+        parsd = dict([ (k,v) for k,v in zip(ping.keys(), pingcsv.split(',')) if v != '' ])
+        ping.update(parsd)
+        return ping
 
     def log_init(self, tries=10, sleep=5):
         """ initialize websocket via http - controllino specific """
