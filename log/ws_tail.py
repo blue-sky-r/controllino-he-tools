@@ -82,7 +82,7 @@ class WSClient:
         """ process comma separated ping cli string pars interval,timeout,payload """
         ping = self.miner_cfg['ping_defaults']
         # actual values
-        parsd = dict([ (k,v) for k,v in zip(ping.keys(), pingcsv.split(',')) if v != '' ])
+        parsd = dict([ (k,int(v) if v.isnumeric() else v) for k,v in zip(ping.keys(), pingcsv.split(',')) if v != '' ])
         ping.update(parsd)
         return ping
 
@@ -135,25 +135,28 @@ class WSClient:
             self.ws_close(ws, status=websocket.STATUS_NORMAL)
             self.run()
 
-    def run(self):
+    def run(self, limit=5):
         """ open logfile and loop forever """
         if not self.log_init(): return
         wsurl = '%s:%d' % (self.ws_server, self.miner_cfg.get(self.follow).get('port'))
-        ws = websocket.WebSocketApp(wsurl,
-                            on_open=self.on_open,
-                            on_ping=self.on_ping,
-                            on_pong=self.on_pong,
-                            on_message=self.on_message,
-                            on_error=self.on_error,
-                            on_close=self.on_close)
-        # ^C= ERR =  = ws://controllinohotspot:7878, teardown= False
-        # = ERR = Connection to remote host was lost. = ws://controllinohotspot:7878, teardown= True
-        # break only on CRTL-C and not on ws errors
-        ws.run_forever(ping_interval=self.ping['ping_interval'],
-                          ping_timeout =self.ping['ping_timeout'],
-                          ping_payload =self.ping['ping_payload'])
-        # send close status back - https://datatracker.ietf.org/doc/html/rfc6455#section-7.4
-        self.ws_close(ws, status=websocket.STATUS_PROTOCOL_ERROR)
+        for self.loop in range(1, limit+1):
+            dbg('tl', "start of loop %d / %d =" % (self.loop, limit))
+            ws = websocket.WebSocketApp(wsurl,
+                                on_open=self.on_open,
+                                on_ping=self.on_ping,
+                                on_pong=self.on_pong,
+                                on_message=self.on_message,
+                                on_error=self.on_error,
+                                on_close=self.on_close)
+            # ^C= ERR =  = ws://controllinohotspot:7878, teardown= False
+            # = ERR = Connection to remote host was lost. = ws://controllinohotspot:7878, teardown= True
+            # break only on CRTL-C and not on ws errors
+            if not ws.run_forever(ping_interval=self.ping['ping_interval'],
+                              ping_timeout =self.ping['ping_timeout'],
+                              ping_payload =self.ping['ping_payload']): break
+            # send close status back - https://datatracker.ietf.org/doc/html/rfc6455#section-7.4
+            self.ws_close(ws, status=websocket.STATUS_PROTOCOL_ERROR)
+        dbg('tl', "end of loop %d / %d =" % (self.loop, limit))
 
 if __name__ == "__main__":
     # cli pars
