@@ -23,7 +23,7 @@ import argparse
 import sys
 import time, datetime
 
-__VERSION__ = '2022.07.23'
+__VERSION__ = '2022.07.24'
 
 # miner config
 #
@@ -137,9 +137,9 @@ class WSClient:
 
     def run(self, limit=5):
         """ open logfile and loop forever """
-        if not self.log_init(): return
         wsurl = '%s:%d' % (self.ws_server, self.miner_cfg.get(self.follow).get('port'))
         for self.loop in range(1, limit+1):
+            if not self.log_init(): break
             dbg('tl', "start of loop %d / %d =" % (self.loop, limit))
             ws = websocket.WebSocketApp(wsurl,
                                 on_open=self.on_open,
