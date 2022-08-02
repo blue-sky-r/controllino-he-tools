@@ -9,7 +9,7 @@ _about_="mrtg probe to graph He miner General Witnesses Overview"
 
 # version
 #
-_version_="2022.07.18"
+_version_="2022.08.82"
 
 # github
 #
@@ -63,12 +63,16 @@ url=http://$host/processlog
 #
 json=$( wget $opts $url ); excode=$?
 
-# {"status":200,
-# "message":"\n\n\n\n
-# General Witnesses Overview  \n----------------------------------\n
-# Total witnesses                   =    25  (1.38/hour)\n
-# Succesfully delivered             =    25   (100%)\n
-# Failed                            =     0     (0%) \n"}
+# {"data":{
+#   "type":"process",
+#   "attributes":
+#       {"process":"\n\n\n\n
+#       General Witnesses Overview  \n
+#       ----------------------------------\n
+#       Total witnesses                   =   123  (0.91/hour)\n
+#       Succesfully delivered             =   122 (99.19%)\n
+#       Failed                            =     1  (0.81%)
+#       \n"}}}
 [ $DBG ] && echo "DBG.WGET.exitcode: $excode" && echo "DBG.JSON: $json" && echo "DBG.KEYS: $keys" && echo
 
 # python code to process json
@@ -78,11 +82,12 @@ import sys,json
 try: j = json.loads(r'$json')
 except json.decoder.JSONDecodeError: sys.exit(-1)
 vars = {}
-if j.get('status') != 200:
-    print('status:', j.get('status'))
-    print('message:', j.get('message'))
+txt = j.get('data',{}).get('attributes',{}).get('process')
+if not txt:
+    print('data:', j.get('data'))
+    print('attributes:', j.get('data',{}).get('attributes'))
 else:
-    for line in j.get('message').split('\n'):
+    for line in txt.split('\n'):
         if '$DBG': print('DBG.LINE:', line)
         if '=' not in line: continue
         key, val = line.split('=')
