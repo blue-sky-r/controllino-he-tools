@@ -84,8 +84,8 @@ except json.decoder.JSONDecodeError: sys.exit(-1)
 vars = {}
 txt = j.get('data',{}).get('attributes',{}).get('process')
 if not txt:
+    print('json:', j)
     print('data:', j.get('data'))
-    print('attributes:', j.get('data',{}).get('attributes'))
 else:
     for line in txt.split('\n'):
         if '$DBG': print('DBG.LINE:', line)
