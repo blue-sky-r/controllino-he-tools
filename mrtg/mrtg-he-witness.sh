@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
-#  firmware_version: raspbian bionic 2022.07.14.0 + dashboard 1.3.7
+#  firmware_version: raspbian bionic 2022.07.14.0 - 2022.08.02 + dashboard 1.3.7 - 1.3.9
 
 # about
 #
@@ -9,7 +9,7 @@ _about_="mrtg probe to graph He miner General Witnesses Overview"
 
 # version
 #
-_version_="2022.08.82"
+_version_="2022.08.83"
 
 # github
 #
