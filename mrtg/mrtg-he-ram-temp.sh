@@ -4,6 +4,7 @@
 #  firmware_version: raspbian bionic 2022.03.23.1 + dashboard 1.2.1 - 1.3.4
 #  firmware_version: raspbian bionic 2022.04.27.0 - 2022.05.13.0 + dashboard 1.3.5
 #  firmware_version: raspbian bionic 2022.05.19.0 - 2022.06.01.0 + dashboard 1.3.6
+#  firmware_version: raspbian bionic 2022.07.14.0 - 2022.08.02 + dashboard 1.3.7 - 1.3.9
 
 # about
 #
@@ -11,7 +12,7 @@ _about_="mrtg probe to graph He miner disk/cpu usage/load"
 
 # version
 #
-_version_="2022.05.12"
+_version_="2022.08.03"
 
 # github
 #
@@ -69,7 +70,7 @@ url=http://$host/hotspotstats
 #
 json=$( wget $opts $url ); excode=$?
 
-# {"diskusage":"58%","ramusage":"606","cpuload":"2%","cputemp":"54.53"}
+# {"data":{"type":"systemstat","attributes":{"diskusage":"58%","ramusage":"403","cpuload":"1%","cputemp":"52.09"}}}
 [ $DBG ] && echo "DBG.WGET.exitcode: $excode" && echo "DBG.JSON: $json" && echo "DBG.KEYS: $keys" && echo
 
 # python code to process json
@@ -83,11 +84,12 @@ def str2float(s, j='unit'):
 
 try: j = json.loads(r'$json')
 except json.decoder.JSONDecodeError: sys.exit(-1)
-if j.get('status') and j.get('message'):
-    print('status:', j.get('status'))
-    print('message:', j.get('message'))
+attr = j.get('data',{}).get('attributes')
+if not attr:
+    print('json:', j)
+    print('data:', j.get('data'))
 else:
-    vars = dict([ (k, str2float(v, '%')) for k,v in j.items() ])
+    vars = dict([ (k, str2float(v, '%')) for k,v in attr.items() ])
     for key in '$keys'.split(', '):
         if '$DBG': print('DBG.key:', key, end=' => ')
         v = eval(key, vars)
