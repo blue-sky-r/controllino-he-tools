@@ -4,6 +4,7 @@
 #  firmware_version: raspbian bionic 2022.03.23.1 + dashboard 1.2.1 - 1.3.4
 #  firmware_version: raspbian bionic 2022.04.27.0 - 2022.05.13.0 + dashboard 1.3.5
 #  firmware_version: raspbian bionic 2022.05.19.0 - 2022.06.01.0 + dashboard 1.3.6
+#  firmware_version: raspbian bionic 2022.07.14.0 + dashboard 1.3.7 - 1.3.9
 
 # about
 #
@@ -11,7 +12,7 @@ _about_="mrtg probe to graph He miner rewards"
 
 # version
 #
-_version_="2022.05.15"
+_version_="2022.08.03"
 
 # github
 #
