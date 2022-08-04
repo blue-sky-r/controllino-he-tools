@@ -4,6 +4,7 @@
 #  firmware_version: raspbian bionic 2022.03.23.1 + dashboard 1.2.1 - 1.3.4
 #  firmware_version: raspbian bionic 2022.04.27.0 - 2022.05.13.0 + dashboard 1.3.5
 #  firmware_version: raspbian bionic 2022.05.19.0 - 2022.06.01.0 + dashboard 1.3.6
+#  firmware_version: raspbian bionic 2022.07.14.0 - 2022.08.02 + dashboard 1.3.7 - 1.3.9
 
 # about
 #
@@ -11,7 +12,7 @@ _about_="mrtg probe to graph He miner disk/cpu usage/load"
 
 # version
 #
-_version_="2022.05.10"
+_version_="2022.08.03"
 
 # github
 #
@@ -65,7 +66,7 @@ url=http://$host/hotspotstats
 #
 json=$( wget $opts $url ); excode=$?
 
-# {"diskusage":"58%","ramusage":"606","cpuload":"2%","cputemp":"54.53"}
+# {"data":{"type":"systemstat","attributes":{"diskusage":"58%","ramusage":"403","cpuload":"2%","cputemp":"52.09"}}}
 [ $DBG ] && echo "DBG.WGET.exitcode: $excode" && echo "DBG.JSON: $json" && echo "DBG.KEYS: $keys" && echo
 
 # python code to process json
@@ -74,9 +75,14 @@ pycode=$( cat <<___
 import sys,json
 try: j = json.loads(r'$json')
 except json.decoder.JSONDecodeError: sys.exit()
-for key in '$keys'.split(', '):
-    if '$DBG': print('DBG.key:', key, end=' => ')
-    print(j.get(key).replace('%',''))
+attr = j.get('data',{}).get('attributes')
+if not attr:
+    print('json:', j)
+    print('data:', j.get('data'))
+else:
+    for key in '$keys'.split(', '):
+        if '$DBG': print('DBG.key:', key, end=' => ')
+        print(attr.get(key).replace('%',''))
 if '$DBG': print('DBG.UPTIME:', end=' ')
 print('?')
 if '$DBG': print('DBG.HOST:', end=' ')
