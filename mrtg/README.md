@@ -70,6 +70,8 @@ Here are some controllino probes to visualize various metrics in [mrtg](https://
 
   * [SD card usage and CPU load](#mrtg-probe--disk-usage-and-cpu-load) - mrtg probe to retrieve disk usage and CPU load
 
+  * [Witnesses Overview](@mrtg-probe--witness) - mrtg probe to retrieve General Witnesses statistics
+
 #### mrtg probe - RAM usage / CPU temperature 
 
 Script [mrtg-he-ram-temp.sh](mrtg-he-ram-temp.sh) retrieves RAM usage and CPU temperature
@@ -175,6 +177,33 @@ Short usage help invoked by -h:
 Example of mrtg monthly graph:
 
 ![screenshot](../screenshot/mrtg-sd-cpu-load.jpg)
+
+#### mrtg probe - Wintnesses Overview
+
+Script [mrtg-he-witness.sh](mrtg-he-witness.sh) retrieves Total number of witnesses and Failed witnesses 
+from General Witness Overview (efined by json keys variable in config section at the top of the script).
+To also process arithmetic expressions with key names it is important to replace spaces in key names with underscores. 
+Raw text is retrieved from *miner processlog* and split line-by-line. Absolute values are extracted and
+evaluated by key definitions. At midnight 00:00 GMT the values are somehow processed and values drop down
+so it gives mrtg graph sawtooth apperance.
+
+Short usage help invoked by -h:
+
+    mrtg$ ./mrtg-he-witness.sh -h
+
+    = mrtg probe to graph He miner General Witnesses Overview = ver 2022.08.83 =
+    
+    usage: ./mrtg-he-witness.sh [-h] [-d] [host]
+    
+    -h   ... show this usage help
+    -d   ... additional debug info
+    host ... host/miner to connect to (default controllinohotspot)
+    
+    https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-witness.sh
+
+Example of mrtg weekly graph (witnessing problems are clearly visible as deep drops):
+
+![screenshot](../screenshot/mrtg-witnesses.jpg)
 
 ### Troubleshooting
 
