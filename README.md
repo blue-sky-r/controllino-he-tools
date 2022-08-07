@@ -39,7 +39,9 @@ Here are some additional utilities I have implemented and been happily using:
   
   * [RAM usage / CPU temperature](mrtg/mrtg-he-ram-temp.sh) - mrtg probe to retrieve RAM utilization and CPU temperature
 
-  * [blockchain height](mrtg/mrtg-he-height.sh) - mrtg probe to retrieve blockchain height
+  * [blockchain height](mrtg/mrtg-he-height.sh) - mrtg probe to retrieve blockchain height - deprecated since fw 1.3.9 (light hotspots)
+
+  * [witnesses overview](mrtg/mrtg-he-witness.sh) - mrtg probe to retrieve General Witnesses statistics   
 
 ### Troubleshooting
 
