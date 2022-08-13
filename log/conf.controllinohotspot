@@ -1,5 +1,5 @@
 # this configuration file is suitable for displaying 
-# controllinohotspot console log
+# controllinohotspot console log fw 2022.08.02.0 + 1.3.9
 
 # copy file to ~/.grc/
 
@@ -50,16 +50,6 @@ regexp=@\w+:\w+:
 colours=white
 count=once
 ======
-# 123 ms
-regexp=\d+ ms
-colours=white
-count=once
-======
-# 697 POCs
-regexp=\d+ POCs
-colours=white
-count=once
-======
 # data
 regexp=PUSH_DATA
 colours=cyan
@@ -70,33 +60,34 @@ regexp=PULL_DATA
 colours=cyan
 count=once
 ======
-# handle
-regexp= handle_packet 
-colours=cyan
-count=once
-======
 # Gateway
 regexp= Gateway 
 colours=cyan
 count=once
 ======
-# signal_strength=-126
-regexp=signal_strength=(-\d+)
+# snr: -19.2
+regexp=snr: (-?\d+\.?\d)
 colours=cyan, bright_white
 count=once
 ======
-# frequency=867.3
-regexp=frequency=(\d+.\d)
+# 868.50 MHz
+regexp=(\d+.\d+) MHz
+colours=cyan, bright_white, cyan
+count=once
+======
+# rssi: -135
+# rssis: -124
+regexp=rssis?: (-\d+)
 colours=cyan, bright_white
 count=once
 ======
-# datarate=<<"SF12BW125">>
-regexp=datarate=<<"(\w+)">>
+# DataRate(SF12, BW125)
+regexp=DataRate\((SF\d+, BW\d+)\)
 colours=cyan, bright_white
 count=once
 ======
-# snr=-9.0
-regexp=snr=(-?\d+.\d)
+# len: 63
+regexp=len: (\d+)
 colours=cyan, bright_white
 count=once
 ======
