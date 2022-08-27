@@ -1,12 +1,7 @@
 #!/usr/bin/python3
 #
-# utility to tail remote log files via websocket ws:// connection
+# controllinohotspot console log classifier for analytics
 #
-# requires: sudo pip3 install websocket-client # https://github.com/websocket-client/websocket-client
-#
-
-# ws_classify -l name.log ... create log from stdin (default
-# ws_classify -s type ... statistics classifier, type is [ count, calls, lora, push/pull data.  ]
 #
 
 import sys
@@ -16,7 +11,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.08.20'
+__VERSION__ = '2022.08.26'
 
 
 
@@ -30,20 +25,57 @@ def dbg(component, msg):
     print('= DBG =', component, '=', msg)
 
 
+class Table:
+
+    def __init__(self, headerstr, formatstr):
+        """ init empty table as list  """
+        self.tab = []
+        self.headerstr = headerstr
+        self.formatstr = formatstr
+
+    def add_row(self, rowastuple):
+        """ add row as tuple """
+        self.tab.append(rowastuple)
+
+    def print(self):
+        """ formatted output """
+        self.printf(self.headerstr, self.formatstr)
+
+    def printf(self, headerstr, formatstr):
+        """ print formatted table headerstr = 'name1, name2' formatstr = '| {0:>23s} | {1:<5s} | {2:^9s} |' """
+        # column names to tuple
+        colnames = tuple([ name.strip() for name in headerstr.split(',') ])
+        # create row separator from formatstr (use empty string as data)
+        rowsep = formatstr.format(*tuple([' ' for i in colnames])).replace(' ', '-').replace('|', '+')
+        # header - print column names centered
+        print(rowsep)
+        print(formatstr.replace('>', '^').replace('<', '^').format(*colnames))
+        print(rowsep)
+        # data rows
+        for row in self.tab:
+            print(formatstr.format(*row))
+        print(rowsep)
+
+
 class Classifier:
 
     def __init__(self, cfg):
         """ init cfg and global level/facility counters """
         self.cfg = cfg
         # counters
-        self.cnt = {
-            'level': { },
-            'facility': { }
-        }
+        self.cnt = {}
         # tables
-        self.tab = {
-            'witness': []
-        }
+        self.tab = {}
+        # process config to add counters and tables
+        for sig, entry in cfg.get('classify').items():
+            # add counter if defined
+            counter = entry.get('counter')
+            if counter:
+                self.cnt[counter] = {}
+            # add table if defined
+            table = entry.get('table')
+            if table:
+                self.tab[counter] = Table(table['header'], table['format'])
 
     def stat_count(self, cntname, match, key=None):
         """ cnt[cntname][match[key]]++ """
@@ -73,13 +105,28 @@ class Classifier:
     def witnessing_onmatch(self, line, linematch, msgmatch):
         """ """
         #print('witnessing_onmatch()', line)
-        self.tab['witness'].append({
-            linematch['datetime']: {
-                'freq': msgmatch['freq'],
-                'rssi': msgmatch['rssi'],
-                'snr': msgmatch['snr']
-            }
-        })
+        self.stat_count('witness', linematch, 'sending witness')
+        self.tab['witness'].add_row((
+            linematch['datetime'],
+            msgmatch['freq'],
+            msgmatch['rssi'],
+            msgmatch['snr']
+        ))
+
+    def uplink_onmatch(self, line, linematch, msgmatch):
+        """ """
+        #print('witnessing_onmatch()', line)
+        self.stat_count('uplink', linematch, 'received uplink')
+        self.tab['uplink'].add_row((
+            linematch['datetime'],
+            msgmatch['freq'],
+            msgmatch['sf'],
+            msgmatch['bw'],
+            msgmatch['rssi'],
+            # add decimal .0 for integer values for alignment
+            msgmatch['snr'] if '.' in msgmatch['snr'] else msgmatch['snr']+'.0',
+            msgmatch['len']
+        ))
 
     def classify(self, line):
         """ classify the log line """
@@ -88,10 +135,6 @@ class Classifier:
         if regex is None: return
         #
         linematch = regex.match(line)
-        # level
-        #self.stat_count('level', linematch)
-        # facility
-        #self.stat_count('facility', linematch)
         #
         for sig, sigcfg in self.cfg.get('classify').items():
             # check facility string match if configured
@@ -106,20 +149,6 @@ class Classifier:
             #
             if sigcfg.get('onmatch'):
                 sigcfg['onmatch'](self, line, linematch, msgmatch)
-
-    def print_table(self, table):
-        """ * date time * f * rate * rssi * snr * """
-        # https://realpython.com/python-formatted-output/
-        rowsep = '+-------------------------+-------+-----------+------+-------+'
-        colname = ('date time', 'fre', 'datarate', 'rssi', 'snr')
-        frmstr = '| {:>23s} | {:>5s} | {:>9s} | {:>4s} | {:>5s} |'
-        #
-        print(rowsep)
-        print(frmstr.replace('>','^').format(*colname))
-        print(rowsep)
-        for row in table:
-            print(frmstr.format(*row))
-        print(rowsep)
 
 
 # miner specific config
@@ -136,26 +165,44 @@ CONFIG = {
     # signal actions
     'classify': {
         signal.SIGUSR1: {
-            'desc': 'level',
+            'counter': 'level',
             'facility': None,
             'match': None,
             'onmatch': Classifier.level_count_onmatch,
             'onsignal': Classifier.level_count_onsignal,
         },
         signal.SIGUSR2: {
-            'desc': 'facility',
+            'counter': 'facility',
             'facility': None,
             'match': None,
             'onmatch': Classifier.facility_count_onmatch,
             'onsignal': Classifier.facility_count_onsignal,
         },
         signal.SIGRTMIN: {
-            'desc': 'witnessing',
+            'counter': 'witness',
             # 2022-07-20 16:07:19.027 8 [info] <0.1778.0>@miner_onion_server_light:decrypt:{230,13} sending witness at RSSI: -139, Frequency: 867.1, SNR: -19.5
             'facility': 'miner_onion_server_light:decrypt',
-            'match': re.compile(r'sending witness at RSSI: (?P<rssi>-\d+), Frequency: (?P<freq>\d+\.\d+), SNR: (?P<snr>(-?\d+\.?\d*))'),
+            'match': re.compile(r'sending witness at RSSI: (?P<rssi>-\d+), Frequency: (?P<freq>\d+\.\d+), SNR: (?P<snr>-?\d+\.?\d*)'),
             'onmatch': Classifier.witnessing_onmatch,
             'onsignal': None,
+            'table': {
+                'header': 'Date Time GMT, Fre, RSSI, SNR',
+                'format': '| {0:>23s} | {1:>5s} | {2:>4s} | {3:>5s} |'
+            }
+        },
+        signal.SIGRTMAX: {
+            'counter': 'uplink',
+            # 2022-08-17 11:07:26.227 7 [info] <0.1647.0>@miner_mux_port:dispatch_port_logs:{118,13} [ gwmp-mux ] From AA:55:5A:00:00:00:00:00 received uplink: @3383561764 us, 868.10 MHz, DataRate(SF12, BW125), rssis: -142, snr: -22.2, len: 22
+            'facility': 'miner_mux_port:dispatch_port_logs',
+            'match': re.compile(
+                r'\[ gwmp-mux \] From AA:55:5A:00:00:00:00:00 received uplink: @\d+ us, (?P<freq>\d+\.\d+) MHz, DataRate\((?P<sf>SF\d+), (?P<bw>BW\d+)\), rssis: (?P<rssi>-\d+), snr: (?P<snr>-?\d+\.?\d*), len: (?P<len>\d+)'
+            ),
+            'onmatch': Classifier.uplink_onmatch,
+            'onsignal': None,
+            'table': {
+                'header': 'Date Time GMT, Fre, SF, BW, RSSI, SNR, Len',
+                'format': '| {0:>23s} | {1:>6s} | {2:<4s} {3:>5s} | {4:>4s} | {5:>5s} | {6:>3s} |'
+            }
         }
     }
 }
@@ -201,7 +248,7 @@ if __name__ == "__main__":
     #        c.classify(line)
     #        break
     for line in sys.stdin:
-        print(line, end='')
+        #print(line, end='')
         c.classify(line)
     #
     print('=')
@@ -209,5 +256,7 @@ if __name__ == "__main__":
     print('=')
     print('FACILITY:'); print(c.cnt['facility'])
     print('=')
-    print('WITNESS:'); print(c.tab['witness'])
+    print('WITNESS:'); print(c.cnt['witness']); c.tab['witness'].print()
+    print('=')
+    print('UPLINK:'); print(c.cnt['uplink']); c.tab['uplink'].print()
 
