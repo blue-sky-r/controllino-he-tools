@@ -147,6 +147,7 @@ class Classifier:
         # counters
         for section, entry in self.cfg.get('classify').items():
             print('section#:', section, end=' ', file=file)
+            #print(self.cnt[section], file=file); print()
             print(json.dumps(self.cnt[section], indent=4, sort_keys=True), file=file)
             print(file=file)
             # optional tables
@@ -166,10 +167,11 @@ CONFIG = {
     # config for firmware version
     'miner_version': '2022.08.17.1',
     # match log line parts
+    # 2022-08-28 10:42:39.904 7 [error] <0.3591.0>@Undefined:Undefined:Undefined gen_server <0.3591.0> terminated with reason: connection_down
     # 2022-08-20 10:26:34.913 7 [info] <0.1746.0>@miner_lora_light:handle_udp_packet:{350,5} PULL_DATA from 12273815315514654720 on 57675
     'log': re.compile(r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \d+ '
                        '\[(?P<level>\w+)\] '
-                       '(<[\d.]+>@(?P<facility>\w+:\w+):\{(?P<loc>\d+,\d+)\} )?'
+                       '<[\d.]+>@(?P<facility>\w+:\w+:?[\w ]*):?[<{](?P<loc>[\d,.]+)[}>] '
                        '(?P<msg>.+)$'),
     # signal action
     #'signals': {
