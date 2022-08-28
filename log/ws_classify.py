@@ -171,7 +171,7 @@ CONFIG = {
     # 2022-08-20 10:26:34.913 7 [info] <0.1746.0>@miner_lora_light:handle_udp_packet:{350,5} PULL_DATA from 12273815315514654720 on 57675
     'log': re.compile(r'^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \d+ '
                        '\[(?P<level>\w+)\] '
-                       '<[\d.]+>@(?P<facility>\w+:\w+:?[\w ]*):?[<{](?P<loc>[\d,.]+)[}>] '
+                       '<[\d.]+>@(?P<facility>\w+:\w+(:[\w ]+)?):?[<{](?P<loc>[\d,.]+)[}>] '
                        '(?P<msg>.+)$'),
     # signal action
     #'signals': {
