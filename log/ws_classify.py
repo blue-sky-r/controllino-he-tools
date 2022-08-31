@@ -13,7 +13,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.08.28'
+__VERSION__ = '2022.08.30'
 
 
 # debog cmponents (csv)
@@ -27,17 +27,20 @@ def dbg(component, msg):
 
 
 class Table:
-    """ formatted table """
+    """ ASCII formatted text table helper """
 
-    def __init__(self, headerstr, formatstr):
+    def __init__(self, headerstr, formatstr, maxrows=None):
         """ init empty table as list  """
         self.tab = []
         self.headerstr = headerstr
         self.formatstr = formatstr
+        self.maxrows = maxrows
 
     def add_row(self, rowastuple):
-        """ add row as tuple """
+        """ add row as tuple, remove the first item if maxrows has been reached """
         self.tab.append(rowastuple)
+        if self.maxrows is not None and len(self.tab) > self.maxrows:
+            self.tab.pop(0)
 
     def print(self, file=sys.stdout):
         """ formatted output with default formatting """
@@ -76,7 +79,7 @@ class Classifier:
             # add table if defined
             table = entry.get('table')
             if table:
-                self.tab[section] = Table(table['header'], table['format'])
+                self.tab[section] = Table(table['header'], table['format'], table.get('maxrows'))
         # attach signal handlers - doesn't work here
         #for sig, fnc in CONFIG.get('signals').items():
         #    signal.signal(sig, fnc)
@@ -199,7 +202,8 @@ CONFIG = {
             'onmatch': Classifier.witnessing_onmatch,
             'table': {
                 'header': 'Date Time GMT, Fre, RSSI, SNR',
-                'format': '| {0:>23s} | {1:>5s} | {2:>4s} | {3:>5s} |'
+                'format': '| {0:>23s} | {1:>5s} | {2:>4s} | {3:>5s} |',
+                'maxrows': 10
             }
         },
         'uplink': {
@@ -212,7 +216,8 @@ CONFIG = {
             'onmatch': Classifier.uplink_onmatch,
             'table': {
                 'header': 'Date Time GMT, Freq, SF, BW, RSSI, SNR, Len',
-                'format': '| {0:>23s} | {1:>6s} | {2:<4s} {3:>5s} | {4:>4s} | {5:>5s} | {6:>3s} |'
+                'format': '| {0:>23s} | {1:>6s} | {2:<4s} {3:>5s} | {4:>4s} | {5:>5s} | {6:>3s} |',
+                'maxrows': 10
             }
         }
     }
