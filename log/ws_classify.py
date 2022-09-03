@@ -4,7 +4,8 @@
 #
 # usage:
 # > ws_tail.py -f console -p 123 controllinohotspot | ws_slassify.py | grcat conf.controllinohotspot
-# > kill -USR1 $PidOfWs_tail; sleep 1; cat /tmp/stats
+# get stats:
+# > kill -USR1 $(pidof -x ws_classify.py); sleep 1; cat /tmp/stats
 
 import sys
 import json
@@ -13,7 +14,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.08.30'
+__VERSION__ = '2022.09.03'
 
 
 # debog cmponents (csv)
@@ -29,11 +30,12 @@ def dbg(component, msg):
 class Table:
     """ ASCII formatted text table helper """
 
-    def __init__(self, headerstr, formatstr, maxrows=None):
+    def __init__(self, headerstr, formatstr, footerstr, maxrows=None):
         """ init empty table as list  """
         self.tab = []
         self.headerstr = headerstr
         self.formatstr = formatstr
+        self.footerstr = footerstr
         self.maxrows = maxrows
 
     def add_row(self, rowastuple):
@@ -44,22 +46,38 @@ class Table:
 
     def print(self, file=sys.stdout):
         """ formatted output with default formatting """
-        self.printf(self.headerstr, self.formatstr, file)
+        self.printf(self.headerstr, self.formatstr, self.footerstr, file)
 
-    def printf(self, headerstr, formatstr, file=sys.stdout):
-        """ parametric formatted output, headerstr = 'name1, name2' formatstr = '| {0:>23s} | {1:<5s} | {2:^9s} |' """
+    def printf(self, headerstr, formatstr, footerstr, file=sys.stdout):
+        """ parametric formatted output, headerstr = 'name1, name2' formatstr = '| {0:>23s} | {1:<5s} | {2:^9s} |', footerstr='text, text' """
         # column names to tuple
         colnames = tuple([ name.strip() for name in headerstr.split(',') ])
+        # replace format float to string 6.1f -> 5s
+        formatstrs = re.sub(r'(\d+)(\.\d+)?f\}', r'\1s}', formatstr)
         # create row separator from formatstr (use empty string as data)
-        rowsep = formatstr.format(*tuple([' ' for i in colnames])).replace(' ', '-').replace('|', '+')
+        rowsep = formatstrs.format(*tuple([' ' for i in colnames])).replace(' ', '-').replace('|', '+')
         # header - print column names centered
         print(rowsep, file=file)
-        print(formatstr.replace('>', '^').replace('<', '^').format(*colnames), file=file)
+        print(formatstrs.replace('>', '^').replace('<', '^').format(*colnames), file=file)
         print(rowsep, file=file)
+        # avg counters for footer
+        avg = None
+        foottext, footnoavg = footerstr.split(', ')
         # data rows
-        for row in self.tab:
+        for rowidx,row in enumerate(self.tab):
             print(formatstr.format(*row), file=file)
+            # calc avg
+            if avg is None:
+                avg = [ 0 if type(value) == float else footnoavg for value in row ]
+            for idx,value in enumerate(row):
+                if type(value) == float:
+                    avg[idx] = (rowidx * avg[idx] + value) / (rowidx+1)
         print(rowsep, file=file)
+        # footer only if we have avg
+        if avg is not None:
+            avg[0] = foottext
+            print(formatstr.format(*avg), file=file)
+            print(rowsep, file=file)
 
 
 class Classifier:
@@ -79,7 +97,7 @@ class Classifier:
             # add table if defined
             table = entry.get('table')
             if table:
-                self.tab[section] = Table(table['header'], table['format'], table.get('maxrows'))
+                self.tab[section] = Table(table['header'], table['format'], table['footer'], table.get('maxrows'))
         # attach signal handlers - doesn't work here
         #for sig, fnc in CONFIG.get('signals').items():
         #    signal.signal(sig, fnc)
@@ -106,7 +124,7 @@ class Classifier:
             linematch['datetime'],
             msgmatch['freq'],
             msgmatch['rssi'],
-            msgmatch['snr']
+            float(msgmatch['snr'])
         ))
 
     def uplink_onmatch(self, line, linematch, msgmatch):
@@ -119,7 +137,8 @@ class Classifier:
             msgmatch['bw'],
             msgmatch['rssi'],
             # add decimal .0 for integer values for alignment
-            msgmatch['snr'] if '.' in msgmatch['snr'] else msgmatch['snr']+'.0',
+            #msgmatch['snr'] if '.' in msgmatch['snr'] else msgmatch['snr']+'.0',
+            float(msgmatch['snr']),
             msgmatch['len']
         ))
 
@@ -202,7 +221,8 @@ CONFIG = {
             'onmatch': Classifier.witnessing_onmatch,
             'table': {
                 'header': 'Date Time GMT, Fre, RSSI, SNR',
-                'format': '| {0:>23s} | {1:>5s} | {2:>4s} | {3:>5s} |',
+                'format': '| {0:>23s} | {1:>5s} | {2:>4s} | {3:>5.1f} |',
+                'footer': 'average values, x',
                 'maxrows': 10
             }
         },
@@ -216,7 +236,8 @@ CONFIG = {
             'onmatch': Classifier.uplink_onmatch,
             'table': {
                 'header': 'Date Time GMT, Freq, SF, BW, RSSI, SNR, Len',
-                'format': '| {0:>23s} | {1:>6s} | {2:<4s} {3:>5s} | {4:>4s} | {5:>5s} | {6:>3s} |',
+                'format': '| {0:>23s} | {1:>6s} | {2:<4s} {3:>5s} | {4:>4s} | {5:>5.1f} | {6:>3s} |',
+                'footer': 'average values, x',
                 'maxrows': 10
             }
         }
