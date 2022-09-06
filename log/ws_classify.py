@@ -14,7 +14,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.09.05'
+__VERSION__ = '2022.09.06'
 
 
 # debog cmponents (csv)
@@ -61,7 +61,13 @@ CONFIG = {
                 'header': 'Date Time GMT, Fre, RSSI, SNR',
                 # float columns f will have average values calculated in the tab footer
                 'format': '| {0:>23s} | {1:>6.2f} | {2:>6.1f} | {3:>5.1f} |',
-                'footer': 'average values, x',
+                'footer': {
+                    'max': 'MaXimal values',
+                    'avg': 'AVeraGe values',
+                    'min': 'MiNimal values',
+                    'empty': 'x',
+                    'display': 'max, avg, min'
+                },
                 'maxrows': 10
             }
         },
@@ -77,7 +83,13 @@ CONFIG = {
                 'header': 'Date Time GMT, Freq, SF, BW, RSSI, SNR, Len',
                 # float columns f will have average values calculated in the tab footer
                 'format': '| {0:>23s} | {1:>6.2f} | {2:<4s} {3:>5s} | {4:>6.1f} | {5:>5.1f} | {6:>5.1f} |',
-                'footer': 'average values, x',
+                'footer': {
+                    'max': 'maximal values',
+                    'avg': 'average values',
+                    'min': 'minimal values',
+                    'empty': 'x',
+                    'display': 'max, avg, min'
+                },
                 'maxrows': 15
             }
         }
@@ -124,23 +136,27 @@ class Table:
         print(rowsep, file=file)
         print(formatstrs.replace('>', '^').replace('<', '^').format(*colnames), file=file)
         print(rowsep, file=file)
-        # avg counters for footer
-        avg = None
-        foottext, footnoavg = footerstr.split(', ')
+        # min,max,avg values for footer
+        stat = {}
         # data rows
         for rowidx,row in enumerate(self.tab):
             print(formatstr.format(*row), file=file)
             # calc avg
-            if avg is None:
-                avg = [ 0 if type(value) == float else footnoavg for value in row ]
+            if not stat:
+                stat['min'] = [ value if type(value) == float else footerstr['empty'] for value in row ]
+                stat['max'] = [ value if type(value) == float else footerstr['empty'] for value in row ]
+                stat['avg'] = [ 0 if type(value) == float else footerstr['empty'] for value in row ]
             for idx,value in enumerate(row):
                 if type(value) == float:
-                    avg[idx] = (rowidx * avg[idx] + value) / (rowidx+1)
+                    stat['min'][idx] = value if value < stat['min'][idx] else stat['min'][idx]
+                    stat['max'][idx] = value if value > stat['max'][idx] else stat['max'][idx]
+                    stat['avg'][idx] = (rowidx * stat['avg'][idx] + value) / (rowidx + 1)
         print(rowsep, file=file)
         # footer only if we have avg
-        if avg is not None:
-            avg[0] = foottext
-            print(formatstr.format(*avg), file=file)
+        if stat:
+            for typ in footerstr.get('display').split(', '):
+                stat[typ][0] = footerstr[typ]
+                print(formatstr.format(*stat[typ]), file=file)
             print(rowsep, file=file)
 
 
