@@ -5,7 +5,7 @@
 # usage:
 # > ws_tail.py -f console -p 123 controllinohotspot | ws_slassify.py | grcat conf.controllinohotspot
 # get stats:
-# > kill -USR1 $(pidof -x ws_classify.py); sleep 1; cat /tmp/stats
+# > kill -USR1 $(pidof -x ws_classify.py) && sleep 1 && cat /tmp/stats
 
 import sys
 import json
@@ -14,7 +14,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.09.06'
+__VERSION__ = '2022.09.07'
 
 
 # debog cmponents (csv)
@@ -35,8 +35,10 @@ CONFIG = {
                        '(?P<msg>.+)$'),
     # signal -> action name
     'signals': {
-        signal.SIGUSR1: 'onsignal_usr1'
+        signal.SIGUSR1: 'onsignal_usr1'     # create statfile
     },
+    # whete the stats are written for further processing
+    'statfile': '/tmp/stats',
     # classify sections
     'classify': {
         'level': {
@@ -62,9 +64,9 @@ CONFIG = {
                 # float columns f will have average values calculated in the tab footer
                 'format': '| {0:>23s} | {1:>6.2f} | {2:>6.1f} | {3:>5.1f} |',
                 'footer': {
-                    'max': 'MaXimal values',
-                    'avg': 'AVeraGe values',
-                    'min': 'MiNimal values',
+                    'max': 'witness MAXimal value',
+                    'avg': 'witness average value',
+                    'min': 'witness MINimal value',
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
@@ -84,9 +86,9 @@ CONFIG = {
                 # float columns f will have average values calculated in the tab footer
                 'format': '| {0:>23s} | {1:>6.2f} | {2:<4s} {3:>5s} | {4:>6.1f} | {5:>5.1f} | {6:>5.1f} |',
                 'footer': {
-                    'max': 'maximal values',
-                    'avg': 'average values',
-                    'min': 'minimal values',
+                    'max': 'uplink MAXimal value',
+                    'avg': 'uplink average value',
+                    'min': 'uplink MINimal value',
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
@@ -165,6 +167,7 @@ class Classifier:
 
     def __init__(self, cfg):
         """ init cfg and global level/facility counters """
+        # config
         self.cfg = cfg
         # counters
         self.cnt = {}
@@ -258,7 +261,11 @@ class Classifier:
 
     def onsignal_usr1(self, signum, frame):
         """ write stats on signal, e.g. > kill -signal pid """
-        with open('/tmp/stats', mode='w') as file:
+        fname = self.cfg.get('statfile')
+        if not fname:
+            print('ERR - stats file not configured')
+            return
+        with open(fname, mode='w') as file:
             self.output_stats(file=file)
 
 
@@ -266,10 +273,10 @@ if __name__ == "__main__":
     # cli pars - https://docs.python.org/3/howto/argparse.html
     parser = argparse.ArgumentParser(description='classify controllino miner console log reading from stdin',
                                      epilog='example: ws_tail.py -f con controllino | ws_classify.py')
-    #parser.add_argument('-q', '--quiet', default=False, required=False, action="store_true",
-    #                    help='quiet mode, do not passthrough processed line (default all to stdout)')
-    #parser.add_argument('-c', '--classify', default='', required=False,
-    #                    help='use internal classifier')
+    parser.add_argument('-q', '--quiet', default=False, required=False, action="store_true",
+                        help='quiet mode, do not passthrough processed line (default pass all lines to stdout)')
+    parser.add_argument('-s', '--stats', default=False, required=False, action="store_true",
+                        help='print final statistics on input eof (default no)')
     parser.add_argument('-d', '--debug', metavar='c1[,c2]', default='', required=False,
                         help='enable debug for component (par for pars, cl for classifier)')
     args = parser.parse_args()
@@ -277,13 +284,13 @@ if __name__ == "__main__":
 
     #
     c = Classifier(CONFIG)
-    #
-    #with open('console.log', 'r') as f:
-    #    for line in f:
-    #        c.classify(line)
-    #        break
+    # process stdin
     for line in sys.stdin:
-        print(line, end='')
+        # optional passthrough
+        if not args.quiet:
+            print(line, end='')
+        # classify
         c.classify(line)
-    # final stats
-    c.output_stats()
+    # optional final stats
+    if args.stats:
+        c.output_stats()
