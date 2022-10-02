@@ -23,7 +23,7 @@ import argparse
 import sys
 import time, datetime
 
-__VERSION__ = '2022.07.24'
+__VERSION__ = '2022.10.02'
 
 # miner config
 #
@@ -86,7 +86,7 @@ class WSClient:
         ping.update(parsd)
         return ping
 
-    def log_init(self, tries=10, sleep=5):
+    def log_init(self, tries=10, sleep=15):
         """ initialize websocket via http - controllino specific """
         self.lines = 0
         url = ''.join([ self.ws_server.replace('ws','http'), '/', self.miner_cfg[self.follow]['open'] ])
@@ -101,7 +101,8 @@ class WSClient:
             except urllib.error.URLError as e:
                 # urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
                 dbg('tl', 'ERR = log_init() attempt %d = %s' % (attempt, e.reason))
-                time.sleep(sleep)
+            #
+            time.sleep(sleep)
 
     def ws_close(self, ws, status=websocket.STATUS_NORMAL):
         """ close websocket connection with status """
@@ -135,7 +136,7 @@ class WSClient:
             self.ws_close(ws, status=websocket.STATUS_NORMAL)
             self.run()
 
-    def run(self, limit=5):
+    def run(self, limit=5, sleep=10):
         """ open logfile and loop forever """
         wsurl = '%s:%d' % (self.ws_server, self.miner_cfg.get(self.follow).get('port'))
         for self.loop in range(1, limit+1):
@@ -156,6 +157,8 @@ class WSClient:
                               ping_payload =self.ping['ping_payload']): break
             # send close status back - https://datatracker.ietf.org/doc/html/rfc6455#section-7.4
             self.ws_close(ws, status=websocket.STATUS_PROTOCOL_ERROR)
+            #
+            time.sleep(sleep)
         dbg('tl', "end of loop %d / %d =" % (self.loop, limit))
 
 if __name__ == "__main__":
