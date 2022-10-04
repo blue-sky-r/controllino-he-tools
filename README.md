@@ -31,7 +31,9 @@ Here are some additional utilities I have implemented and been happily using:
 
   * [ws_read](log/ws_read.py) - read via websocket ws:// (just proof-of-concept, use ws_tail)
   
-  * [ws_tail](log/ws_tail.py) - websocket tail 
+  * [ws_tail](log/ws_tail.py) - websocket tail for console log
+
+  * [ws_classify](log/ws_classify.py) - console log classifier, outputs stats on signal
 
 * [mrtg probes](mrtg/) - to visualize various metrics in famous snmp based [mrtg](https://oss.oetiker.ch/mrtg/) grapher:
 
