@@ -14,7 +14,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.09.07'
+__VERSION__ = '2022.10.04'
 
 
 # debog cmponents (csv)
@@ -60,12 +60,12 @@ CONFIG = {
             'match': re.compile(r'sending witness at RSSI: (?P<rssi>-\d+), Frequency: (?P<freq>\d+\.\d+), SNR: (?P<snr>-?\d+\.?\d*)'),
             'onmatch': 'witnessing_onmatch',
             'table': {
-                'header': 'Date Time GMT, Fre, RSSI, SNR',
+                'header': 'Date Time GMT, Freq, RSSI, SNR',
                 # float columns f will have average values calculated in the tab footer
                 'format': '| {0:>23s} | {1:>6.2f} | {2:>6.1f} | {3:>5.1f} |',
                 'footer': {
                     'max': 'witness MAXimal value',
-                    'avg': 'witness average value',
+                    'avg': 'witness AVeraGe value',
                     'min': 'witness MINimal value',
                     'empty': 'x',
                     'display': 'max, avg, min'
@@ -74,7 +74,7 @@ CONFIG = {
             }
         },
         'uplink': {
-            'desc': 'uplink received',
+            'desc': 'uplink received and table',
             # 2022-08-17 11:07:26.227 7 [info] <0.1647.0>@miner_mux_port:dispatch_port_logs:{118,13} [ gwmp-mux ] From AA:55:5A:00:00:00:00:00 received uplink: @3383561764 us, 868.10 MHz, DataRate(SF12, BW125), rssis: -142, snr: -22.2, len: 22
             'facility': 'miner_mux_port:dispatch_port_logs',
             'match': re.compile(
@@ -87,7 +87,7 @@ CONFIG = {
                 'format': '| {0:>23s} | {1:>6.2f} | {2:<4s} {3:>5s} | {4:>6.1f} | {5:>5.1f} | {6:>5.1f} |',
                 'footer': {
                     'max': 'uplink MAXimal value',
-                    'avg': 'uplink average value',
+                    'avg': 'uplink AVeraGe value',
                     'min': 'uplink MINimal value',
                     'empty': 'x',
                     'display': 'max, avg, min'
@@ -130,12 +130,13 @@ class Table:
         """ parametric formatted output, headerstr = 'name1, name2' formatstr = '| {0:>23s} | {1:<5s} | {2:^9s} |', footerstr='text, text' """
         # column names to tuple
         colnames = tuple([ name.strip() for name in headerstr.split(',') ])
-        # replace format float to string 6.1f -> 5s
+        # replace format float to string 6.1f -> 6s
         formatstrs = re.sub(r'(\d+)(\.\d+)?f\}', r'\1s}', formatstr)
         # create row separator from formatstr (use empty string as data)
         rowsep = formatstrs.format(*tuple([' ' for i in colnames])).replace(' ', '-').replace('|', '+')
         # header - print column names centered
         print(rowsep, file=file)
+        # mod left and right align to centered
         print(formatstrs.replace('>', '^').replace('<', '^').format(*colnames), file=file)
         print(rowsep, file=file)
         # min,max,avg values for footer
@@ -143,16 +144,19 @@ class Table:
         # data rows
         for rowidx,row in enumerate(self.tab):
             print(formatstr.format(*row), file=file)
-            # calc avg
+            # calc avg only for float values
+            # init on the first pass
             if not stat:
                 stat['min'] = [ value if type(value) == float else footerstr['empty'] for value in row ]
                 stat['max'] = [ value if type(value) == float else footerstr['empty'] for value in row ]
                 stat['avg'] = [ 0 if type(value) == float else footerstr['empty'] for value in row ]
+            # hold min. max and calc avg values
             for idx,value in enumerate(row):
                 if type(value) == float:
                     stat['min'][idx] = value if value < stat['min'][idx] else stat['min'][idx]
                     stat['max'][idx] = value if value > stat['max'][idx] else stat['max'][idx]
                     stat['avg'][idx] = (rowidx * stat['avg'][idx] + value) / (rowidx + 1)
+        # write stats to the file
         print(rowsep, file=file)
         # footer only if we have avg
         if stat:
