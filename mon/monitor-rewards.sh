@@ -2,6 +2,8 @@
 
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.08.17.1 + dashboard 1.4.1
+#
+# > nohup monitor-rewards.sh '1h 23m' &
 
 # about
 #
@@ -9,7 +11,7 @@ _about_="HNT rewards monitor - restarts container on flat rewards"
 
 # version
 #
-_version_="2022.10.10"
+_version_="2022.10.12"
 
 # github
 #
@@ -64,6 +66,10 @@ period=${1}
 url_rewards=http://$host/rewards/1
 url_restart=http://$host/miner-restart
 
+# just log start
+#
+$out "START - pid: $$ - sleep: $period - host: $host"
+
 # python code to process json from stdin
 #
 pycode=$( cat <<___
@@ -78,11 +84,11 @@ ___
 json=$( wget $opts $url_rewards ); excode=$?
 
 # {"status":200,"rewards":{"total":0.31404812,"sum":31404812,"stddev":0.012765751345,"min":0,"median":0.01125426,"max":0,"avg":0.0125619248}}
-$out "WGET url: $url_rewards exitcode: $excode" && $out "JSON: $json"
+$out "INIT REWARDS WGET url: $url_rewards exitcode: $excode" && $out "JSON: $json"
 
 # json python processing
 rewards_last=$( echo "$json" | $python "$pycode" )
-# exit if rewards is empty string
+# show result to stderr and exit if rewards is empty string
 [ -z "$rewards_last" ] && >&2 echo "ERROR getting rewards: $rewards_last from json: $json" && exit 2
 
 # loop forever
@@ -91,9 +97,9 @@ do
     # actual rewards
     json=$( wget $opts $url_rewards ); excode=$?
     # {"status":200,"rewards":{"total":0.31404812,"sum":31404812,"stddev":0.012765751345,"min":0,"median":0.01125426,"max":0,"avg":0.0125619248}}
-    $out "WGET url:$url_rewards exitcode: $excode" && $out "JSON: $json"
+    $out "REWARDS WGET url:$url_rewards exitcode: $excode" && $out "JSON: $json"
     rewards=$( echo "$json" | $python "$pycode" )
-    $out "REWARDS: $rewards REWARDS-LAST: $rewards_last"
+    $out "REWARDS: $rewards_last -> $rewards"
 
     # loop if no rewards returned
 	[ -z "$rewards" ] && continue
@@ -104,5 +110,5 @@ do
 	# restart container
 	json=$( wget $opts $url_restart ); excode=$?
 	# {"data":{"type":"container","attributes":{"name":"miner","state":"running"}}}
-	$out "WGET url:$url_restart exitcode: $excode" && $out "JSON: $json"
+	$out "RESTART WGET url:$url_restart exitcode: $excode" && $out "JSON: $json"
 done
