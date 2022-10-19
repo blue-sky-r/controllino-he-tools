@@ -35,6 +35,10 @@ Here are some additional utilities I have implemented and been happily using:
 
   * [ws_classify](log/ws_classify.py) - console log classifier, outputs stats on signal
 
+* [monitors](mon/) - supervising scripts (monitoring and taking action):
+
+  * [monitor-rewards](mon/monitor-rewards.sh) - restart container if rewards are stuck/flat for time period
+
 * [mrtg probes](mrtg/) - to visualize various metrics in famous snmp based [mrtg](https://oss.oetiker.ch/mrtg/) grapher:
 
   * [HNT rewards](mrtg/mrtg-he-rewards.sh) - mrtg probe to retrieve HNT rewards for time period
