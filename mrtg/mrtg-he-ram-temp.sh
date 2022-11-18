@@ -5,6 +5,7 @@
 #  firmware_version: raspbian bionic 2022.04.27.0 - 2022.05.13.0 + dashboard 1.3.5
 #  firmware_version: raspbian bionic 2022.05.19.0 - 2022.06.01.0 + dashboard 1.3.6
 #  firmware_version: raspbian bionic 2022.07.14.0 - 2022.08.02 + dashboard 1.3.7 - 1.3.9
+#  firmware_version: raspbian bionic 2022.10.28.0 + dashboard 1.4.2
 
 # about
 #
@@ -12,7 +13,7 @@ _about_="mrtg probe to graph He miner disk/cpu usage/load"
 
 # version
 #
-_version_="2022.08.03"
+_version_="2022.11.16"
 
 # github
 #
@@ -29,6 +30,10 @@ HeRAM=4096
 # json message keys and expressions to eveluate to display in this order
 #
 keys="ramusage / $HeRAM * 100, cputemp"
+
+# in case of error, output this value for mrtg (otherwise mrtg will use http errro code as value)
+#
+errval=0
 
 # wget options
 #
@@ -86,8 +91,8 @@ try: j = json.loads(r'$json')
 except json.decoder.JSONDecodeError: sys.exit(-1)
 attr = j.get('data',{}).get('attributes')
 if not attr:
-    print('json:', j)
-    print('data:', j.get('data'))
+    print($errval, 'json:', j)
+    print($errval, 'data:', j.get('data'))
 else:
     vars = dict([ (k, str2float(v, '%')) for k,v in attr.items() ])
     for key in '$keys'.split(', '):
