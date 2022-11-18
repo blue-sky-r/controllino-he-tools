@@ -2,6 +2,7 @@
 
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.07.14.0 - 2022.08.02 + dashboard 1.3.7 - 1.3.9
+#  firmware_version: raspbian bionic 2022.10.28.0 + dashboard 1.4.2
 
 # about
 #
@@ -9,7 +10,7 @@ _about_="mrtg probe to graph He miner General Witnesses Overview"
 
 # version
 #
-_version_="2022.08.83"
+_version_="2022.11.15"
 
 # github
 #
@@ -22,6 +23,10 @@ host="controllinohotspot"
 # key eval expressions to display in this order (use '_' instead of space in var names)
 #
 keys="Succesfully_delivered, Total_witnesses"
+
+# in case of error, output this value for mrtg (otherwise mrtg will use http errro code as value)
+#
+errval=0
 
 # wget options
 #
@@ -84,8 +89,8 @@ except json.decoder.JSONDecodeError: sys.exit(-1)
 vars = {}
 txt = j.get('data',{}).get('attributes',{}).get('process')
 if not txt:
-    print('json:', j)
-    print('data:', j.get('data'))
+    print($errval, 'json:', j)
+    print($errval, 'data:', j.get('data'))
 else:
     for line in txt.split('\n'):
         if '$DBG': print('DBG.LINE:', line)
