@@ -2,6 +2,7 @@
 
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.08.17.1 + dashboard 1.4.1
+#  firmware_version: raspbian bionic 2022.10.28.0 + dashboard 1.4.2
 #
 # > nohup monitor-rewards.sh '1h 23m' &
 
@@ -11,7 +12,7 @@ _about_="HNT rewards monitor - restarts container on flat rewards"
 
 # version
 #
-_version_="2022.10.12"
+_version_="2022.11.20"
 
 # github
 #
@@ -19,7 +20,7 @@ _github_="https://github.com/blue-sky-r/controllino-he-tools/blob/main/mon/mon-r
 
 # syslog tag
 #
-tag="mon-reward"
+tag="mon-rewards"
 out="logger -t $tag"
 
 # DEFAULT host
@@ -91,13 +92,31 @@ rewards_last=$( echo "$json" | $python "$pycode" )
 # show result to stderr and exit if rewards is empty string
 [ -z "$rewards_last" ] && >&2 echo "ERROR getting rewards: $rewards_last from json: $json" && exit 2
 
+# json returned in case of HTTP 503 error
+json503='{"status":503}'
+
+# limit tries in case of http 503
+max_tries=10
+
+# wait betwwen repeated attempts in case of http 503
+sleep_tries='1m 23s'
+
 # loop forever
 while sleep $period
 do
-    # actual rewards
-    json=$( wget $opts $url_rewards ); excode=$?
-    # {"status":200,"rewards":{"total":0.31404812,"sum":31404812,"stddev":0.012765751345,"min":0,"median":0.01125426,"max":0,"avg":0.0125619248}}
-    $out "REWARDS WGET url:$url_rewards exitcode: $excode" && $out "JSON: $json"
+    # try to get rewards multiple times in case of 503
+    for try in $(seq $max_tries)
+    {
+        # actual rewards
+        json=$( wget $opts $url_rewards ); excode=$?
+        # {"status":200,"rewards":{"total":0.31404812,"sum":31404812,"stddev":0.012765751345,"min":0,"median":0.01125426,"max":0,"avg":0.0125619248}}
+        $out "REWARDS ${try}. try WGET url:$url_rewards exitcode: $excode" && $out "JSON: $json"
+        # will retry only on http 503
+        [ "$json" != "$json503" ] && break
+        # sleep between retries
+        sleep $sleep_tries
+    }
+    # returned json
     rewards=$( echo "$json" | $python "$pycode" )
     $out "REWARDS: $rewards_last -> $rewards"
 
