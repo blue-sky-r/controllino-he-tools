@@ -10,7 +10,7 @@ _about_="mrtg probe to graph He miner General Witnesses Overview"
 
 # version
 #
-_version_="2022.11.15"
+_version_="2022.11.18"
 
 # github
 #
@@ -85,12 +85,12 @@ json=$( wget $opts $url ); excode=$?
 pycode=$( cat <<___
 import sys,json
 try: j = json.loads(r'$json')
-except json.decoder.JSONDecodeError: sys.exit(-1)
+except json.decoder.JSONDecodeError: j = {}
 vars = {}
 txt = j.get('data',{}).get('attributes',{}).get('process')
 if not txt:
     print($errval, 'json:', j)
-    print($errval, 'data:', j.get('data'))
+    print($errval, 'data:', j.get('data', 'wget-exitcode %d' % $excode))
 else:
     for line in txt.split('\n'):
         if '$DBG': print('DBG.LINE:', line)
@@ -99,11 +99,11 @@ else:
         key, val = key.strip().replace(' ', '_'), val.strip().split()[0].strip()
         if '$DBG': print('DBG.RESULT:', key, '=>', val)
         vars[key] = int(val)
-if '$DBG': print()
-for expr in '$keys'.split(', '):
-    if '$DBG': print('DBG.EXPR:', expr, end=' = ')
-    v = eval(expr, vars)
-    print(round(v))
+    if '$DBG': print()
+    for expr in '$keys'.split(', '):
+        if '$DBG': print('DBG.EXPR:', expr, end=' = ')
+        v = eval(expr, vars)
+        print(round(v))
 if '$DBG': print('DBG.UPTIME:', end=' ')
 print('?')
 if '$DBG': print('DBG.HOST:', end=' ')
