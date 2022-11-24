@@ -13,7 +13,7 @@ _about_="mrtg probe to graph He miner rewards"
 
 # version
 #
-_version_="2022.11.16"
+_version_="2022.11.23"
 
 # github
 #
@@ -92,9 +92,9 @@ json=$( wget $opts $url ); excode=$?
 pycode=$( cat <<___
 import sys,json
 try: j = json.loads(r'$json')
-except json.decoder.JSONDecodeError: sys.exit(-1)
+except json.decoder.JSONDecodeError: j = {}
 if j.get('status') != 200:
-    print($errval, 'status:', j.get('status'))
+    print($errval, 'status:', j.get('status', 'wget-exitcode %d' % $excode))
     print($errval, 'message:', j.get('message'))
 else:
     vars = j.get('rewards')
