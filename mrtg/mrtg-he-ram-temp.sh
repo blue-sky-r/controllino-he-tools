@@ -13,7 +13,7 @@ _about_="mrtg probe to graph He miner disk/cpu usage/load"
 
 # version
 #
-_version_="2022.11.16"
+_version_="2022.11.18"
 
 # github
 #
@@ -88,11 +88,11 @@ def str2float(s, j='unit'):
     except ValueError: return s
 
 try: j = json.loads(r'$json')
-except json.decoder.JSONDecodeError: sys.exit(-1)
+except json.decoder.JSONDecodeError: j = {}
 attr = j.get('data',{}).get('attributes')
 if not attr:
     print($errval, 'json:', j)
-    print($errval, 'data:', j.get('data'))
+    print($errval, 'data:', j.get('data', 'wget-exitcode %d' % $excode))
 else:
     vars = dict([ (k, str2float(v, '%')) for k,v in attr.items() ])
     for key in '$keys'.split(', '):
