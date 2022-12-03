@@ -66,7 +66,7 @@ Here are some controllino probes to visualize various metrics in [mrtg](https://
 
   * [HNT rewards](#mrtg-probe--hnt-rewards) - mrtg probe to retrieve HNT rewards for time period
   
-  * [blockchain height](#mrtg-probe--blockchain-height) - mrtg probe to retrieve blockchain height (graphs delta)
+  * [blockchain height](#mrtg-probe--blockchain-height) - mrtg probe to retrieve blockchain height (graphs delta) - deprecated since light hotspots
 
   * [SD card usage and CPU load](#mrtg-probe--disk-usage-and-cpu-load) - mrtg probe to retrieve disk usage and CPU load
 
@@ -93,7 +93,7 @@ Short usage help invoked by -h:
     
     https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-ram-temp.sh
 
-Example of mrtg monthly graph:
+Example of mrtg monthly graph (wastootk-like RAM usage is related to full miner operation):
 
 ![screenshot](../screenshot/mrtg-ram-temp.jpg)
 
@@ -174,7 +174,7 @@ Short usage help invoked by -h:
     
     https://github.com/blue-sky-r/controllino-he-tools/blob/main/mrtg/mrtg-he-load.sh
 
-Example of mrtg monthly graph:
+Example of mrtg monthly graph (sawtooth-like SD card usage is related to full miner operation):
 
 ![screenshot](../screenshot/mrtg-sd-cpu-load.jpg)
 
@@ -215,7 +215,5 @@ What to do if something goes wrong or does not work:
 
 * check the script source and try to increase timeouts, retries etc ...
 
-##### keywords
-
-shell bash python3 controllino controllinohotspot json he helium miner HNT mrtg probe monitoring
+##### keywords: shell bash python3 controllino controllinohotspot RPi4 json he helium miner HNT mrtg probe monitoring
 

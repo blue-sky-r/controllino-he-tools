@@ -71,7 +71,5 @@ What to do if something goes wrong or does not work:
 
 * check the script source and try to increase timeouts, retries etc ...
 
-##### keywords
-
-shell bash python3 websock console.log error.log controllino he helium miner HNT mrtg probe monitoring dashboard
+##### keywords: shell bash python3 websock console.log error.log controllino he helium miner HNT mrtg probe monitoring dashboard
 
