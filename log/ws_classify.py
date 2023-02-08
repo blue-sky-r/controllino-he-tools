@@ -14,7 +14,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2022.10.04'
+__VERSION__ = '2023.02.08'
 
 
 # debog cmponents (csv)
@@ -25,7 +25,7 @@ DBGMODE = ''
 #
 CONFIG = {
     # config for firmware version
-    'miner_version': '2022.08.17.1',
+    'miner_version': '2023.02.07.0',
     # match console log line parts
     # 2022-08-28 10:42:39.904 7 [error] <0.3591.0>@Undefined:Undefined:Undefined gen_server <0.3591.0> terminated with reason: connection_down
     # 2022-08-20 10:26:34.913 7 [info] <0.1746.0>@miner_lora_light:handle_udp_packet:{350,5} PULL_DATA from 12273815315514654720 on 57675
@@ -55,9 +55,10 @@ CONFIG = {
         },
         'witness': {
             'desc': 'witnessing count and table',
-            # 2022-07-20 16:07:19.027 8 [info] <0.1778.0>@miner_onion_server_light:decrypt:{230,13} sending witness at RSSI: -139, Frequency: 867.1, SNR: -19.5
-            'facility': 'miner_onion_server_light:decrypt',
-            'match': re.compile(r'sending witness at RSSI: (?P<rssi>-\d+), Frequency: (?P<freq>\d+\.\d+), SNR: (?P<snr>-?\d+\.?\d*)'),
+            # 2023-02-08 18:07:15.270 7 [info] <0.1639.0>@miner_gateway_port:dispatch_port_logs:{195,13} [ gateway-rs ] received possible PoC payload: Packet(Packet { oui: 0, r#type: Lorawan, payload: [224, ... 92],
+            # timestamp: 3764563187, signal_strength: -135.0, frequency: 867.1, datarate: "SF12BW125", snr: -21.8, routing: None, rx2_window: None }), module: beacon
+            'facility': 'miner_gateway_port:dispatch_port_logs',
+            'match': re.compile(r' signal_strength: (?P<rssi>-\d+\.\d+), frequency: (?P<freq>\d+\.\d+), datarate: "SF12BW125", snr: (?P<snr>-?\d+\.?\d*)'),
             'onmatch': 'witnessing_onmatch',
             'table': {
                 'header': 'Date Time GMT, Freq, RSSI, SNR',
@@ -92,7 +93,7 @@ CONFIG = {
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 15
+                'maxrows': 30
             }
         }
     }
