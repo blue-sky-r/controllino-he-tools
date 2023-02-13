@@ -3,6 +3,7 @@
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.07.14.0 - 2022.08.02 + dashboard 1.3.7 - 1.3.9
 #  firmware_version: raspbian bionic 2022.10.28.0 + dashboard 1.4.2
+#  firmware_version: raspbian bionic 2023.02.07.0 + dashboard 1.4.3
 
 # about
 #
@@ -10,7 +11,7 @@ _about_="mrtg probe to graph He miner General Witnesses Overview"
 
 # version
 #
-_version_="2022.11.18"
+_version_="2023.02.13"
 
 # github
 #
@@ -78,6 +79,12 @@ json=$( wget $opts $url ); excode=$?
 #       Succesfully delivered             =   122 (99.19%)\n
 #       Failed                            =     1  (0.81%)
 #       \n"}}}
+#
+# {"data":{
+#	"type":"process",
+#	"attributes":
+#		{"process":"\n\n\nNo witnesses found\n"}}}
+#
 [ $DBG ] && echo "DBG.WGET.exitcode: $excode" && echo "DBG.JSON: $json" && echo "DBG.KEYS: $keys" && echo
 
 # python code to process json
@@ -102,7 +109,7 @@ else:
     if '$DBG': print()
     for expr in '$keys'.split(', '):
         if '$DBG': print('DBG.EXPR:', expr, end=' = ')
-        v = eval(expr, vars)
+        v = eval(expr, vars) if vars else 0
         print(round(v))
 if '$DBG': print('DBG.UPTIME:', end=' ')
 print('?')
