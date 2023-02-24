@@ -14,7 +14,7 @@ import re
 import signal
 import time
 
-__VERSION__ = '2023.02.08'
+__VERSION__ = '2023.02.24'
 
 
 # debog cmponents (csv)
@@ -55,10 +55,12 @@ CONFIG = {
         },
         'witness': {
             'desc': 'witnessing count and table',
-            # 2023-02-08 18:07:15.270 7 [info] <0.1639.0>@miner_gateway_port:dispatch_port_logs:{195,13} [ gateway-rs ] received possible PoC payload: Packet(Packet { oui: 0, r#type: Lorawan, payload: [224, ... 92],
-            # timestamp: 3764563187, signal_strength: -135.0, frequency: 867.1, datarate: "SF12BW125", snr: -21.8, routing: None, rx2_window: None }), module: beacon
+            # 2023-02-22 22:43:51.481 8 [info] <0.1639.0>@miner_gateway_port:dispatch_port_logs:{195,13} [ gateway-rs ] received possible PoC payload: Packet(Packet { oui: 0, r#type: Lorawan, payload: [224, ... 253],
+            # timestamp: 3892943259, signal_strength: -131.0, frequency: 868.5, datarate: "SF12BW125", snr: -18.5, routing: None, rx2_window: None }), module: beacon
             'facility': 'miner_gateway_port:dispatch_port_logs',
-            'match': re.compile(r' signal_strength: (?P<rssi>-\d+\.\d+), frequency: (?P<freq>\d+\.\d+), datarate: "SF12BW125", snr: (?P<snr>-?\d+\.?\d*)'),
+            'match': re.compile(r'\[ gateway-rs \] received possible PoC payload: Packet.+'
+                                'signal_strength: (?P<rssi>-?\d+\.\d+), frequency: (?P<freq>\d+\.\d+), '
+                                'datarate: "SF12BW125", snr: (?P<snr>-?\d+\.?\d*), routing: .+ module: beacon'),
             'onmatch': 'witnessing_onmatch',
             'table': {
                 'header': 'Date Time GMT, Freq, RSSI, SNR',
@@ -206,7 +208,7 @@ class Classifier:
         self.stat_count('facility', linematch)
 
     def witnessing_onmatch(self, line, linematch, msgmatch):
-        """ """
+        """ he witness """
         self.stat_count('witness', linematch, 'sending witness')
         self.tab['witness'].add_row((
             linematch['datetime'],
@@ -216,7 +218,7 @@ class Classifier:
         ))
 
     def uplink_onmatch(self, line, linematch, msgmatch):
-        """ """
+        """ lora uplink """
         self.stat_count('uplink', linematch, 'received uplink')
         self.tab['uplink'].add_row((
             linematch['datetime'],
@@ -246,7 +248,8 @@ class Classifier:
             msgmatch = None
             if entry.get('match') and linematch:
                 msgmatch = entry['match'].match(linematch['msg'])
-                if msgmatch is None: continue
+                if msgmatch is None:
+                    continue
             # call onmatch fnc if defined
             if entry.get('onmatch'):
                 self.__getattribute__(entry.get('onmatch'))(line, linematch, msgmatch)
