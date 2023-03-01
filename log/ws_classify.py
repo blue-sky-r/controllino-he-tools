@@ -12,9 +12,9 @@ import json
 import argparse
 import re
 import signal
-import time
+import datetime
 
-__VERSION__ = '2023.02.24'
+__VERSION__ = '2023.03.01'
 
 
 # debog cmponents (csv)
@@ -73,7 +73,8 @@ CONFIG = {
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 10
+                'maxrows': 100,
+                'maxtime': datetime.timedelta(hours=1)
             }
         },
         'uplink': {
@@ -95,7 +96,8 @@ CONFIG = {
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 30
+                'maxrows': 100,
+                'maxtime': datetime.timedelta(hours=1)
             }
         }
     }
@@ -111,18 +113,43 @@ def dbg(component, msg):
 class Table:
     """ ASCII formatted text table helper """
 
-    def __init__(self, headerstr, formatstr, footerstr, maxrows=None):
+    def __init__(self, headerstr, formatstr, footerstr, maxrows=None, maxtime=None):
         """ init empty table as list  """
         self.tab = []
         self.headerstr = headerstr
         self.formatstr = formatstr
         self.footerstr = footerstr
         self.maxrows = maxrows
+        self.maxtime = maxtime
+
+    def rows_over_limit(self):
+        """ true if table has too many rows """
+        # no limit
+        if self.maxrows is None:
+            return False
+        return len(self.tab) > self.maxrows
+
+    def rows_expired(self):
+        """ true if the first table row is older than maxtime """
+        # no limit
+        if self.maxtime is None:
+            return False
+        # empty table
+        if len(self.tab) < 1:
+            return False
+        # the first row/tuple item is datetime as string 2023-02-22 22:43:51.481
+        datetimestr, ms = self.tab[0][0].split('.')
+        timestamp = datetime.datetime.strptime(datetimestr, "%Y-%m-%d %H:%M:%S")
+        return timestamp < (datetime.datetime.now() - self.maxtime)
 
     def add_row(self, rowastuple):
         """ add row as tuple, remove the first item if maxrows has been reached """
         self.tab.append(rowastuple)
-        if self.maxrows is not None and len(self.tab) > self.maxrows:
+        # limit to max rows if set
+        if self.rows_over_limit():
+            self.tab.pop(0)
+        # limit to maxtime if set
+        while self.rows_expired():
             self.tab.pop(0)
 
     def print(self, file=sys.stdout):
@@ -187,7 +214,7 @@ class Classifier:
             # add table if defined
             table = entry.get('table')
             if table:
-                self.tab[section] = Table(table['header'], table['format'], table['footer'], table.get('maxrows'))
+                self.tab[section] = Table(table['header'], table['format'], table['footer'], table.get('maxrows'), table.get('maxtime'))
         # attach signal handlers
         for sig, fncname in CONFIG.get('signals').items():
             signal.signal(sig, self.__getattribute__(fncname))
