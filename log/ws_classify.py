@@ -14,7 +14,7 @@ import re
 import signal
 import datetime
 
-__VERSION__ = '2023.03.01'
+__VERSION__ = '2023.03.02'
 
 
 # debog cmponents (csv)
@@ -73,7 +73,7 @@ CONFIG = {
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 100,
+                'maxrows': 10,
                 'maxtime': datetime.timedelta(hours=1)
             }
         },
@@ -96,7 +96,7 @@ CONFIG = {
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 100,
+                'maxrows': 10,
                 'maxtime': datetime.timedelta(hours=1)
             }
         }
@@ -129,7 +129,7 @@ class Table:
             return False
         return len(self.tab) > self.maxrows
 
-    def rows_expired(self):
+    def rows_expired(self, nowstr):
         """ true if the first table row is older than maxtime """
         # no limit
         if self.maxtime is None:
@@ -138,19 +138,27 @@ class Table:
         if len(self.tab) < 1:
             return False
         # the first row/tuple item is datetime as string 2023-02-22 22:43:51.481
-        datetimestr, ms = self.tab[0][0].split('.')
-        timestamp = datetime.datetime.strptime(datetimestr, "%Y-%m-%d %H:%M:%S")
-        return timestamp < (datetime.datetime.now() - self.maxtime)
+        format = "%Y-%m-%d %H:%M:%S"
+        # remove decimal part after .
+        tab1, ms = self.tab[0][0].split('.')
+        now,  ms = nowstr.split('.')
+        # convert to datetime
+        tab1dt = datetime.datetime.strptime(tab1, format)
+        nowdt  = datetime.datetime.strptime(now,  format)
+        return tab1dt < (nowdt - self.maxtime)
 
     def add_row(self, rowastuple):
         """ add row as tuple, remove the first item if maxrows has been reached """
         self.tab.append(rowastuple)
+        dbg('tab', 'add_row() {0}'.format(rowastuple))
         # limit to max rows if set
         if self.rows_over_limit():
-            self.tab.pop(0)
+            i = self.tab.pop(0)
+            dbg('tab', 'add_row() rows_over_limit: {0}'.format(i))
         # limit to maxtime if set
-        while self.rows_expired():
-            self.tab.pop(0)
+        while self.rows_expired(nowstr=rowastuple[0]):
+            i = self.tab.pop(0)
+            dbg('tab', 'add_row() rows_expired: {0}'.format(i))
 
     def print(self, file=sys.stdout):
         """ formatted output with default formatting """
@@ -313,7 +321,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--stats', default=False, required=False, action="store_true",
                         help='print final statistics on input eof (default no)')
     parser.add_argument('-d', '--debug', metavar='c1[,c2]', default='', required=False,
-                        help='enable debug for component (par for pars, cl for classifier)')
+                        help='enable debug for component (par for pars, cl for classifier, tab for tables)')
     args = parser.parse_args()
     DBGMODE = args.debug
 
