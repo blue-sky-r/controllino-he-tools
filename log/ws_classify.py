@@ -14,7 +14,7 @@ import re
 import signal
 import datetime
 
-__VERSION__ = '2023.03.02'
+__VERSION__ = '2023.03.05'
 
 
 # debog cmponents (csv)
@@ -35,7 +35,8 @@ CONFIG = {
                        '(?P<msg>.+)$'),
     # signal -> action name
     'signals': {
-        signal.SIGUSR1: 'onsignal_usr1'     # create statfile
+        signal.SIGUSR1: 'onsignal_usr1',    # create detailed statfile
+        signal.SIGUSR2: 'onsignal_usr2'     # create summary only statfile
     },
     # whete the stats are written for further processing
     'statfile': '/tmp/stats',
@@ -66,6 +67,7 @@ CONFIG = {
                 'header': 'Date Time GMT, Freq, RSSI, SNR',
                 # float columns f will have average values calculated in the tab footer
                 'format': '| {0:>23s} | {1:>6.2f} | {2:>6.1f} | {3:>5.1f} |',
+                'invisible': '... {0:d} rows ...',
                 'footer': {
                     'max': 'witness MAXimal value',
                     'avg': 'witness AVeraGe value',
@@ -73,7 +75,7 @@ CONFIG = {
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 10,
+                'maxrows': 500,
                 'maxtime': datetime.timedelta(hours=1)
             }
         },
@@ -89,6 +91,7 @@ CONFIG = {
                 'header': 'Date Time GMT, Freq, SF, BW, RSSI, SNR, Len',
                 # float columns f will have average values calculated in the tab footer
                 'format': '| {0:>23s} | {1:>6.2f} | {2:<4s} {3:>5s} | {4:>6.1f} | {5:>5.1f} | {6:>5.1f} |',
+                'invisible': '... {0:d} rows ...',
                 'footer': {
                     'max': 'uplink MAXimal value',
                     'avg': 'uplink AVeraGe value',
@@ -96,7 +99,7 @@ CONFIG = {
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 10,
+                'maxrows': 1000,
                 'maxtime': datetime.timedelta(hours=1)
             }
         }
@@ -113,11 +116,12 @@ def dbg(component, msg):
 class Table:
     """ ASCII formatted text table helper """
 
-    def __init__(self, headerstr, formatstr, footerstr, maxrows=None, maxtime=None):
+    def __init__(self, headerstr, formatstr, invisistr, footerstr, maxrows=None, maxtime=None):
         """ init empty table as list  """
         self.tab = []
         self.headerstr = headerstr
         self.formatstr = formatstr
+        self.invisistr = invisistr
         self.footerstr = footerstr
         self.maxrows = maxrows
         self.maxtime = maxtime
@@ -160,12 +164,9 @@ class Table:
             i = self.tab.pop(0)
             dbg('tab', 'add_row() rows_expired: {0}'.format(i))
 
-    def print(self, file=sys.stdout):
-        """ formatted output with default formatting """
-        self.printf(self.headerstr, self.formatstr, self.footerstr, file)
-
-    def printf(self, headerstr, formatstr, footerstr, file=sys.stdout):
-        """ parametric formatted output, headerstr = 'name1, name2' formatstr = '| {0:>23s} | {1:<5s} | {2:^9s} |', footerstr='text, text' """
+    def print_header(self, headerstr, formatstr, file=sys.stdout):
+        """ print only separator line + column names + separator line """
+        # parametric formatted output, headerstr = 'name1, name2' formatstr = '| {0:>23s} | {1:<5s} | {2:^9s} |'
         # column names to tuple
         colnames = tuple([ name.strip() for name in headerstr.split(',') ])
         # replace format float to string 6.1f -> 6s
@@ -177,23 +178,40 @@ class Table:
         # mod left and right align to centered
         print(formatstrs.replace('>', '^').replace('<', '^').format(*colnames), file=file)
         print(rowsep, file=file)
+        # row separator
+        return rowsep
+
+    def print_rows(self, formatstr, footerstr, invisistr, visible='*', file=sys.stdout):
+        """ parametric formatted output, formatstr='| {0:>23s} | {1:<5s} | {2:^9s} |', footerstr='text, text'  """
         # min,max,avg values for footer
         stat = {}
+        # marker for invisible rows to avoid multiple invisiblestr lines
+        invisible_printed = False
         # data rows
         for rowidx,row in enumerate(self.tab):
-            print(formatstr.format(*row), file=file)
+            if visible == '*' or rowidx+1 in visible or rowidx-len(self.tab) in visible:
+                print(formatstr.format(*row), file=file)
+            else:
+                if not invisible_printed:
+                    print(invisistr.format(len(self.tab)), file=file)
+                    invisible_printed = True
             # calc avg only for float values
             # init on the first pass
             if not stat:
                 stat['min'] = [ value if type(value) == float else footerstr['empty'] for value in row ]
                 stat['max'] = [ value if type(value) == float else footerstr['empty'] for value in row ]
-                stat['avg'] = [ 0 if type(value) == float else footerstr['empty'] for value in row ]
+                stat['avg'] = [     0 if type(value) == float else footerstr['empty'] for value in row ]
             # hold min. max and calc avg values
             for idx,value in enumerate(row):
                 if type(value) == float:
                     stat['min'][idx] = value if value < stat['min'][idx] else stat['min'][idx]
                     stat['max'][idx] = value if value > stat['max'][idx] else stat['max'][idx]
                     stat['avg'][idx] = (rowidx * stat['avg'][idx] + value) / (rowidx + 1)
+        # stats
+        return stat
+
+    def print_footer(self, formatstr, footerstr, rowsep, stat={}, file=sys.stdout):
+        """ parametric formatted output, formatstr='| {0:>23s} | {1:<5s} | {2:^9s} |', footerstr='text, text' """
         # write stats to the file
         print(rowsep, file=file)
         # footer only if we have avg
@@ -202,6 +220,23 @@ class Table:
                 stat[typ][0] = footerstr[typ]
                 print(formatstr.format(*stat[typ]), file=file)
             print(rowsep, file=file)
+
+    def print_full(self, file=sys.stdout):
+        """ formatted output with default formatting """
+        self.printf(self.headerstr, self.formatstr, self.invisistr, visible='*', footerstr=self.footerstr, file=file)
+
+    def print_terse(self, file=sys.stdout):
+        """ formatted output with default formatting """
+        self.printf(self.headerstr, self.formatstr, self.invisistr, visible=[1,-1], footerstr=self.footerstr, file=file)
+
+    def printf(self, headerstr, formatstr, invisistr, visible, footerstr, file=sys.stdout):
+        """ parametric formatted output, headerstr='name1, name2' formatstr='| {0:>23s} | {1:<5s} | {2:^9s} |', footerstr='text, text' """
+        # table header (separator + col.names + separator)
+        rowsep = self.print_header(headerstr, formatstr, file=file)
+        # data rows
+        stat = self.print_rows(formatstr, footerstr, invisistr, visible, file=file)
+        # footer stats
+        self.print_footer(formatstr, footerstr, rowsep, stat, file=file)
 
 
 class Classifier:
@@ -222,7 +257,8 @@ class Classifier:
             # add table if defined
             table = entry.get('table')
             if table:
-                self.tab[section] = Table(table['header'], table['format'], table['footer'], table.get('maxrows'), table.get('maxtime'))
+                self.tab[section] = Table(table['header'], table['format'], table['invisible'], table['footer'],
+                                          table.get('maxrows'), table.get('maxtime'))
         # attach signal handlers
         for sig, fncname in CONFIG.get('signals').items():
             signal.signal(sig, self.__getattribute__(fncname))
@@ -289,17 +325,16 @@ class Classifier:
             if entry.get('onmatch'):
                 self.__getattribute__(entry.get('onmatch'))(line, linematch, msgmatch)
 
-    def output_stats(self, file=sys.stdout):
+    def output_stats_full(self, file=sys.stdout):
         """ counters and tabs to file """
         # counters
         for section, entry in self.cfg.get('classify').items():
             print('section#:', section, end=' ', file=file)
-            #print(self.cnt[section], file=file); print()
             print(json.dumps(self.cnt[section], indent=4, sort_keys=True), file=file)
             print(file=file)
             # optional tables
             if self.tab.get(section):
-                self.tab[section].print(file)
+                self.tab[section].print_full(file)
                 print(file=file)
 
     def onsignal_usr1(self, signum, frame):
@@ -309,7 +344,28 @@ class Classifier:
             print('ERR - stats file not configured')
             return
         with open(fname, mode='w') as file:
-            self.output_stats(file=file)
+            self.output_stats_full(file=file)
+
+    def output_stats_terse(self, file=sys.stdout):
+        """ counters and tabs to file """
+        # counters
+        for section, entry in self.cfg.get('classify').items():
+            print('section#:', section, end=' ', file=file)
+            print(json.dumps(self.cnt[section], indent=4, sort_keys=True), file=file)
+            print(file=file)
+            # optional tables
+            if self.tab.get(section):
+                self.tab[section].print_terse(file)
+                print(file=file)
+
+    def onsignal_usr2(self, signum, frame):
+        """ write stats on signal, e.g. > kill -signal pid """
+        fname = self.cfg.get('statfile')
+        if not fname:
+            print('ERR - stats file not configured')
+            return
+        with open(fname, mode='w') as file:
+            self.output_stats_terse(file=file)
 
 
 if __name__ == "__main__":
