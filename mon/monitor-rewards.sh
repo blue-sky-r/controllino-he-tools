@@ -3,6 +3,7 @@
 # For CONTROLLINO miner only - https://hotspot.controllino.com/
 #  firmware_version: raspbian bionic 2022.08.17.1 + dashboard 1.4.1
 #  firmware_version: raspbian bionic 2022.10.28.0 + dashboard 1.4.2
+#  firmware_version: raspbian bionic 2023.02.87.0 + dashboard 1.4.3
 #
 # > nohup monitor-rewards.sh '1h 23m' &
 
@@ -12,11 +13,15 @@ _about_="HNT rewards monitor - restarts container on flat rewards"
 
 # version
 #
-_version_="2022.11.20"
+_version_="2023.03.12"
 
 # github
 #
 _github_="https://github.com/blue-sky-r/controllino-he-tools/blob/main/mon/mon-rewards.sh"
+
+# json key to check
+# {"total":0.31404812,"sum":31404812,"stddev":0.012765751345,"min":0,"median":0.01125426,"max":0,"avg":0.0125619248}}
+jkey='total'
 
 # syslog tag
 #
@@ -77,7 +82,7 @@ pycode=$( cat <<___
 import sys,json
 try: j = json.load(sys.stdin)
 except json.decoder.JSONDecodeError: sys.exit(-1)
-if j.get('status') == 200: print(j.get('rewards').get('total'))
+if j.get('status') == 200: print(j.get('rewards').get('$jkey'))
 ___
 )
 
@@ -110,7 +115,7 @@ do
         # actual rewards
         json=$( wget $opts $url_rewards ); excode=$?
         # {"status":200,"rewards":{"total":0.31404812,"sum":31404812,"stddev":0.012765751345,"min":0,"median":0.01125426,"max":0,"avg":0.0125619248}}
-        $out "REWARDS ${try}. try WGET url:$url_rewards exitcode: $excode" && $out "JSON: $json"
+        $out "REWARDS ${try} of ${max_tries}. try WGET url:$url_rewards exitcode: $excode" && $out "JSON: $json"
         # will retry only on http 503
         [ "$json" != "$json503" ] && break
         # sleep between retries
