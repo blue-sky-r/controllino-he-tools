@@ -1,3 +1,11 @@
+# R.I.P. Controllino
+
+    Update 03/2023 - Controllino firmware has been discontinued and replaced by very limited 
+    Nebra firmware which doesn't provide any miner operational details nor logs. So from this date
+    all tools published here become unusable and You have to pay for Nebra Diagnostic.
+    
+[Nebra Ltd providing updates for Controllino/Conelcom Hotspots](https://www.nebra.com/blogs/news/nebra-ltd-providing-updates-for-controllino-conelcom-hotspots)
+
 # mrtg probes for controllinohotspot
 
 [Controllino Hotspot](https://hotspot.controllino.com/) is [Raspberry Pi4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) 
