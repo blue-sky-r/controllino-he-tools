@@ -1,8 +1,16 @@
+# R.I.P. Controllino
+
+    Update 03/2023 - Controllino firmware has been discontinued and replaced by very limited 
+    Nebra firmware which doesn't provide any miner operational details nor logs. So from this date
+    all tools published here become unusable and You have to pay for Nebra Diagnostic.
+    
+[Nebra Ltd providing updates for Controllino/Conelcom Hotspots](https://www.nebra.com/blogs/news/nebra-ltd-providing-updates-for-controllino-conelcom-hotspots)
+
 # Controllino He miner tools
 
 Here are some additional utilities I have implemented and been in active use on my home monitoring
 rig running [alpine](https://www.alpinelinux.org/) linux (no systemd ;-). The scripts are mixture of bash and python
-programming for quick and easy implementation and fixing producing the immediate results - high ROI. 
+programming for quick and easy implementation and fixing to produce the immediate results - high ROI. 
 
 Use at Your own risk - as the [Controllino Hotspot](https://hotspot.controllino.com/) firmware is still under development 
 the changes are unexpected and lately also unannounced and there is no backward compatibility maintained or promised:   
