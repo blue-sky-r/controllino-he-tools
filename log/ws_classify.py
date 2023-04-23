@@ -14,7 +14,7 @@ import re
 import signal
 import datetime
 
-__VERSION__ = '2023.03.05'
+__VERSION__ = '2023.03.23'
 
 
 # debog cmponents (csv)
@@ -69,14 +69,14 @@ CONFIG = {
                 'format': '| {0:>23s} | {1:>6.2f} | {2:>6.1f} | {3:>5.1f} |',
                 'invisible': '... {0:d} rows ...',
                 'footer': {
-                    'max': 'witness MAXimal value',
-                    'avg': 'witness AVeraGe value',
-                    'min': 'witness MINimal value',
+                    'max': 'MAX {datetime}',
+                    'avg': 'AVG {datetime}',
+                    'min': 'MIN {datetime}',
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 500,
-                'maxtime': datetime.timedelta(hours=1)
+                'maxrows': 250,
+                'maxtime': datetime.timedelta(days=1, hours=1)
             }
         },
         'uplink': {
@@ -99,8 +99,8 @@ CONFIG = {
                     'empty': 'x',
                     'display': 'max, avg, min'
                 },
-                'maxrows': 1000,
-                'maxtime': datetime.timedelta(hours=1)
+                'maxrows': 500,
+                'maxtime': datetime.timedelta(hours=2)
             }
         }
     }
