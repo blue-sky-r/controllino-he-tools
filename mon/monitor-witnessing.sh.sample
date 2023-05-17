@@ -1,0 +1,120 @@
+#!/bin/bash
+
+#  monitor witnessing activity for controllino with nebra firmware:
+#  firmware_version: v1.0.2-14 (f97cd6b)
+
+# ==================================================
+# You have to edit entries in square brackets <text>
+# ==================================================
+
+# about
+#
+_about_="He witness monitor - restarts miner on no witnessing within the last hour"
+
+# version
+#
+_version_="2023.05.16"
+
+# github
+#
+_github_="https://github.com/blue-sky-r/controllino-he-tools/blob/main/mon/monitor-witnessing.sh"
+
+# usage example
+#
+_usage_="> nohup monitor-witnessing.sh '1h 23m' &"
+
+# URL of hotspot at heliumtracker.io
+#
+url=https://heliumtracker.io/hotspots/<id>
+
+# syslog tag
+#
+tag="mon-witness"
+out="logger -t $tag"
+
+# DEFAULT host
+#
+host="controllinohotspot"
+
+# login password (url encoded)
+#
+pswd='<password>'
+
+# cookies
+#
+cookies="/tmp/cookies"
+
+# usage help
+#
+[ $# -lt 1 -o "$1" == "-h" ] && cat <<< """
+= $_about_ = ver $_version_ =
+
+usage: $0 [-h] [-d] period [host]
+
+-h     ... show this usage help
+-d     ... output to stdout (default to syslog with tag $tag)
+period ... how often to check (human friendly format like '1h 23m 45s')
+host   ... host/miner to connect to (default $host)
+
+$_usage_
+
+$_github_
+""" && exit 1
+
+# optional debug
+#
+[ "$1" == "-d" ] && out=echo && shift
+
+# period - how often to check
+#
+period=${1}
+
+# He miner hostname
+#
+[ $2 ] && host=$2
+
+# controllino urls
+#
+url_login=http://$host/login
+url_restart=http://$host/reboot?type=soft
+
+# perl regex - 30 minutes ago at 02:39PM / about 1 hour ago at 02:16PM
+#
+regex_ok='\d+ minutes ago'
+
+# just log start
+#
+$out "START - pid: $$ - sleep: $period - host: $host"
+
+# login and restart miner
+#
+function miner_restart
+{
+    # get session cookies
+    wget --quiet --post-data="txtPassword=$pswd" --save-cookies "$cookies" --keep-session-cookies -O /dev/null "$url_login"
+    # initiate restart - will return exitcode 4 / network failure
+    wget --quiet --tries=1 --timeout=1 --load-cookies "$cookies" -O /dev/null "$url_restart"
+}
+
+# get the last witnessed entry if within the last hour
+#
+function last_witnessed
+{
+    # get the last witnessing from heliumtracker.io
+    wget --quiet -O - "$url" | grep -Po "$regex_ok" | head -1
+}
+
+# loop forever
+while sleep $period
+do
+    # get the last witnessed entry
+    last=$( last_witnessed )
+    $out "WITNESSED ${last:- -}"
+
+    # no action if the last witnessing was within hour
+	[ -n "$last" ] && continue
+
+    # restart miner
+    miner_restart
+	$out "RESTART exitcode: $?"
+done
