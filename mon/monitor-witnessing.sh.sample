@@ -9,11 +9,11 @@
 
 # about
 #
-_about_="He witness monitor - restarts miner on no witnessing within the last hour"
+_about_="He witness monitor - restarts miner on no witnessing within the last 2 hours"
 
 # version
 #
-_version_="2023.05.16"
+_version_="2023.05.17"
 
 # github
 #
@@ -38,7 +38,7 @@ host="controllinohotspot"
 
 # login password (url encoded)
 #
-pswd='<password>'
+pswd='<passwod>'
 
 # cookies
 #
@@ -80,7 +80,7 @@ url_restart=http://$host/reboot?type=soft
 
 # perl regex - 30 minutes ago at 02:39PM / about 1 hour ago at 02:16PM
 #
-regex_ok='\d+ minutes ago'
+regex_ok='(\d+ minutes)|(about 1 hour) ago'
 
 # just log start
 #
