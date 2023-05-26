@@ -13,7 +13,7 @@ _about_="He witness monitor - restarts miner on no witnessing within the last 2 
 
 # version
 #
-_version_="2023.05.17"
+_version_="2023.05.25"
 
 # github
 #
@@ -38,7 +38,7 @@ host="controllinohotspot"
 
 # login password (url encoded)
 #
-pswd='<passwod>'
+pswd='<password>'
 
 # cookies
 #
@@ -80,11 +80,11 @@ url_restart=http://$host/reboot?type=soft
 
 # perl regex - 30 minutes ago at 02:39PM / about 1 hour ago at 02:16PM
 #
-regex_ok='(\d+ minutes)|(about 1 hour) ago'
+regex_ok='((\d+ minutes)|(about \d hours?)) ago'
 
 # just log start
 #
-$out "START - pid: $$ - sleep: $period - host: $host"
+$out "START - ver: $_version_ - pid: $$ - sleep: $period - host: $host"
 
 # login and restart miner
 #
@@ -112,9 +112,12 @@ do
     $out "WITNESSED ${last:- -}"
 
     # no action if the last witnessing was within hour
-	[ -n "$last" ] && continue
+    [[ $last =~ "minutes ago" ]] && continue
+    # no action if the last witnessing was within two hours
+    [[ $last == "1 hour ago" ]] && continue
+    
 
     # restart miner
     miner_restart
-	$out "RESTART exitcode: $?"
+    $out "RESTART exitcode: $?"
 done
