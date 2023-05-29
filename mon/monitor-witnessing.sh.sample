@@ -13,7 +13,7 @@ _about_="He witness monitor - restarts miner on no witnessing within the last 2 
 
 # version
 #
-_version_="2023.05.25"
+_version_="2023.05.26"
 
 # github
 #
@@ -114,7 +114,7 @@ do
     # no action if the last witnessing was within hour
     [[ $last =~ "minutes ago" ]] && continue
     # no action if the last witnessing was within two hours
-    [[ $last == "1 hour ago" ]] && continue
+    [[ $last == "about 1 hour ago" ]] && continue
     
 
     # restart miner
