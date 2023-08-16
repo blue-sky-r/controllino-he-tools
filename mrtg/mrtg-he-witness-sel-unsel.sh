@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#  monitor witnessing activity for controllino with nebra firmware via
-#  firmware_version: v1.0.2-14 (f97cd6b)
+#  monitor witnessing activity for controllino with nebra firmware
+#  via web https://explorer.moken.io - reftecting web page changes @15.08.2023
 
 # ==================================================
 # You have to edit entries in square brackets <text>
@@ -13,7 +13,7 @@ _about_="He selected and unselected witnessing"
 
 # version
 #
-_version_="2023.08.15"
+_version_="2023.08.16"
 
 # github
 #
@@ -26,7 +26,7 @@ hid=<hotspot-id-string>
 
 # retrieve all witnessing within range the lastN-hours (valid values 2H, 8H, 12H, 24H, 7D)
 #
-range=2H
+range=8H
 
 # retrieve only activities (comma separated list, valid keys are Witness Beacon IOT+Data IOT+Rewards)
 #
@@ -34,8 +34,8 @@ activities=Witness
 
 # count keys
 #
-key1=Selected
-key2=Unselected
+key1='>Selected'
+key2='Not Selected'
 
 # local cache dir
 #
@@ -43,7 +43,7 @@ cachedir=/tmp
 
 # local cache lifetime
 #
-cachettl='65 mins'
+cachettl='72 mins'
 
 # wget options
 #
@@ -68,7 +68,7 @@ $_github_
 #
 [ "$1" == "-d" ] && DBG=1 && shift
 
-# optional He miner hostname
+# optional He miner id
 #
 [ $1 ] && hid=$1
 
@@ -82,18 +82,16 @@ $_github_
 
 # explorer URL
 #
-#url="https://explorer.moken.io/hotspots/$hid/activity?activityRange=$range&selectedActivities=$activities&selectedLayer=hotspot"
-#url="https://explorer.moken.io/hotspots/$hid/activity?activityRange=$range&selectedActivities=$activities"
 page="activity?activityRange=$range&selectedActivities=$activities"
 url="https://explorer.moken.io/hotspots/$hid/$page"
 #
 [ $DBG ] && echo "DBG.URL: $url"
 
-# cache timestamp
+# cache timestamp (0 if local cache is empty)
 #
 cachets=0; [ -s "$cachedir/$page" ] && cachets=$(date -r "$cachedir/$page" +%s)
 
-# cache expiration timestamp
+# cache expiration timestamp (anything olderlower than $expts is considered expired)
 #
 expts=$(date -d "now - $cachettl" +%s)
 #
@@ -110,19 +108,13 @@ fi
 #
 [ $DBG ] && echo "DBG.CACHE: "$(ls -l $cachedir/$page)
 
-# get selected and unselected witnessing
-# wget -O - "https://explorer.moken.io/hotspots/112A7iiPUF6cKCRGE4CT646LkQJ5gUmU51HsFYqtW5914fN9pMub/activity?activityRange=8H&selectedActivities=Witness" | grep -o "\(Uns\|S\)elected"
-witnessing=$( grep -o '\('$key1'\)\|\('$key2'\)' "$cachedir/$page" )
-#
-[ $DBG ] && echo "DBG.witnessing: "$witnessing && echo
-
 # Selected
 [ $DBG ] && echo -n "DBG.$key1: "
-echo "$witnessing" | grep -c $key1
+grep -o "$key1" "$cachedir/$page" | wc -l
 
-# Unselected
+# not selected
 [ $DBG ] && echo -n "DBG.$key2: "
-echo "$witnessing" | grep -c $key2
+grep -o "$key2" "$cachedir/$page" | wc -l
 
 # uptime
 [ $DBG ] && echo -n "DBG.uptime: "
